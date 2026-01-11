@@ -1,5 +1,4 @@
 # MizuMail
-========
 Licence     : Modified BSD Licence  
 Platform    : Windows11(24H2)
 Discription : This application is a Windows e-mail client software that supports POP3/IMAP4.
