@@ -474,8 +474,18 @@ namespace MizuMail
 
                     if (mail.notReadYet)
                     {
-                        item.Font = new Font(baseFont, FontStyle.Bold);
-                        item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
+                        if (list == collectionMail[SEND])
+                        {
+                            // ★ 未送信メールの見た目（送信フォルダ）
+                            item.BackColor = Color.FromArgb(255, 245, 230); // 柔らかいオレンジ
+                            item.Font = new Font(baseFont, FontStyle.Bold);
+                        }
+                        else
+                        {
+                            // ★ 未読メールの見た目（受信フォルダ）
+                            item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
+                            item.Font = new Font(baseFont, FontStyle.Bold);
+                        }
                     }
                     else
                     {
