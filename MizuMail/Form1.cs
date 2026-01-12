@@ -4,7 +4,9 @@ using MailKit.Net.Pop3;
 using MailKit.Net.Smtp;
 using MimeKit;
 using MimeKit.Text;
+using Newtonsoft.Json;
 using NLog;
+using NLog.Targets;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -654,6 +656,9 @@ namespace MizuMail
                             mail.date = DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString();
                             mail.notReadYet = false;
 
+                            // ★ 送信済みとしてファイルに上書き保存
+                            SaveMail(mail);
+
                             // ステータス更新（任意）
                             labelMessage.Text = "送信: " + mail.address;
                             statusStrip1.Refresh();
@@ -752,7 +757,7 @@ namespace MizuMail
                 mail.notReadYet = false;
             }
 
-            if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath + mail.mailName))
+            if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath + mail.mailName) && mail.mailName.Contains(".eml"))
             {
                 MimeMessage message = MimeMessage.Load(mailPath + mail.mailName);
                 // HTMLメールの場合はHTML表示
@@ -857,6 +862,7 @@ namespace MizuMail
                         // コレクションに追加する
                         Mail editmail = new Mail(to, cc, bcc, subject, body, atach, "未送信", "", "", true);
                         collectionMail[SEND].Add(editmail);
+                        SaveMail(mail);
                     }
                 }
             }
@@ -1149,7 +1155,31 @@ namespace MizuMail
                 }
                 else if (listMain.Columns[0].Text == "宛先")
                 {
-                    // 送信メールの場合：ごみ箱コレクションへ（ファイルは無い想定）
+                    // 送信メールの場合：ごみ箱コレクションへ
+                    string src = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", mail.mailName);
+                    string dst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
+                    try
+                    {
+                        if (File.Exists(src))
+                        {
+                            // 既に同名ファイルがごみ箱にあれば上書きを避けるためユニーク化
+                            if (File.Exists(dst))
+                            {
+                                string uniqueDst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", Guid.NewGuid().ToString() + "_" + mail.mailName);
+                                File.Move(src, uniqueDst);
+                                mail.mailName = Path.GetFileName(uniqueDst);
+                            }
+                            else
+                            {
+                                File.Move(src, dst);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error($"Move error: {ex.Message}");
+                    }
+
                     collectionMail[DELETE].Add(mail);
                     collectionMail[SEND].Remove(mail);
                 }
@@ -1247,6 +1277,7 @@ namespace MizuMail
                     // コレクションに追加する
                     Mail mail = new Mail(to, cc, bcc, subject, body, atach, "未送信", "", "", true);
                     collectionMail[SEND].Add(mail);
+                    SaveMail(mail);
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -1517,6 +1548,7 @@ namespace MizuMail
                     // コレクションに追加する
                     Mail mail = new Mail(to, cc, bcc, subject, body, atach, "未送信", "", "", true);
                     collectionMail[SEND].Add(mail);
+                    SaveMail(mail);
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -1985,7 +2017,7 @@ namespace MizuMail
                 if (!(selItem.Tag is Mail))
                     continue;
                 Mail mail = (Mail)selItem.Tag;
-                if (mail.mailName != string.Empty)
+                if (mail.mailName != string.Empty && mail.mailName.Contains(".eml"))
                 {
                     // 受信メールの場合：受信コレクションへ（ファイルも移動）
                     string src = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
@@ -2016,7 +2048,31 @@ namespace MizuMail
                 }
                 else
                 {
-                    // 送信メールの場合：送信コレクションへ（ファイルは無い想定）
+                    // 送信メールの場合：送信コレクションへ
+                    string src = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
+                    string dst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", mail.mailName);
+                    try
+                    {
+                        if (File.Exists(src))
+                        {
+                            // 既に同名ファイルが受信箱にあれば上書きを避けるためユニーク化
+                            if (File.Exists(dst))
+                            {
+                                string uniqueDst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", Guid.NewGuid().ToString() + "_" + mail.mailName);
+                                File.Move(src, uniqueDst);
+                                mail.mailName = Path.GetFileName(uniqueDst);
+                            }
+                            else
+                            {
+                                File.Move(src, dst);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error($"Move error: {ex.Message}");
+                    }
+
                     collectionMail[SEND].Add(mail);
                     collectionMail[DELETE].Remove(mail);
                 }
@@ -2238,7 +2294,7 @@ namespace MizuMail
                 mail.notReadYet = false;
 
             // メールファイルが存在する場合は読み込む
-            if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath))
+            if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath) && mailPath.Contains(".eml"))
             {
                 MimeMessage message = MimeMessage.Load(mailPath);
 
@@ -2422,6 +2478,32 @@ namespace MizuMail
             catch (Exception ex)
             {
                 MessageBox.Show("ヘルプを開けませんでした。\n" + ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void SaveMail(Mail mail)
+        {
+            string sendFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mbox", "send");
+            Directory.CreateDirectory(sendFolder);
+
+            // mailName がまだ無い場合は新規生成
+            if (string.IsNullOrEmpty(mail.mailName))
+            {
+                // ファイル名用の日時は必ず「現在時刻」を使う
+                string safeDate = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                mail.mailName = $"{safeDate}_{mail.id}.mail";
+            }
+
+            string filePath = Path.Combine(sendFolder, mail.mailName);
+
+            // JSON で保存（Newtonsoft.Json）
+            string json = JsonConvert.SerializeObject(mail, Formatting.Indented);
+            File.WriteAllText(filePath, json, Encoding.UTF8);
+
+            // ArrayListに追加
+            if (!collectionMail[SEND].Contains(mail))
+            {
+                collectionMail[SEND].Add(mail);
             }
         }
 
