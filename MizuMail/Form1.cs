@@ -226,12 +226,12 @@ namespace MizuMail
             currentMail = null;
 
             System.Windows.Forms.Application.Idle += Application_Idle;
-            listMain.ColumnClick += listMain_ColumnClick;
-            toolFilterCombo.SelectedIndex = 0;
 
+            listMain.ColumnClick += listMain_ColumnClick;
             listMain.SmallImageList = new ImageList { ImageSize = new Size(1, 20) };
             listViewItemSorter = ListViewItemComparer.Default;
             listMain.ListViewItemSorter = listViewItemSorter;
+            listMain.Columns.Add("プレビュー", 100);
         }
 
         /// <summary>
@@ -465,6 +465,13 @@ namespace MizuMail
                     string sizeText = FormatSize(sizeBytes);
                     item.SubItems.Add(sizeText);
                     item.SubItems.Add(mail.mailName);
+
+                    // ★ 本文プレビュー（1 行だけ）
+                    string preview = mail.body?.Replace("\r", "").Replace("\n", " ");
+                    if (!string.IsNullOrEmpty(preview) && preview.Length > 30)
+                        preview = preview.Substring(0, 30) + "…";
+
+                    item.SubItems.Add(preview);
 
                     // Mail オブジェクトを Tag に保持（表示順とデータを対応させる）
                     item.Tag = mail;
@@ -753,7 +760,7 @@ namespace MizuMail
             else if (listMain.Columns[0].Text == "宛先")
             {
                 // 送信メールの場合
-                mailPath = "";
+                mailPath = System.Windows.Forms.Application.StartupPath + "\\mbox\\send\\";
             }
             else if (listMain.Columns[0].Text == "差出人または宛先")
             {
@@ -809,6 +816,18 @@ namespace MizuMail
             }
             else
             {
+                if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath + mail.mailName) && mail.mailName.Contains(".mail"))
+                {
+                    // ファイルが存在する場合は.mailファイルを読み込む
+                    mail = LoadSendMail(mailPath + mail.mailName);
+                    if (mail == null)
+                    {
+                        MessageBox.Show("メールの読み込みに失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
+
+                // 添付ファイルが存在する場合は添付ファイルメニューに登録する
                 if (mail.atach != string.Empty)
                 {
                     // 送信メールで添付ファイルが存在する場合
@@ -937,6 +956,14 @@ namespace MizuMail
             // ストリームライタとファイルストリームを閉じる
             writer.Close();
             stream.Close();
+
+            // listMainのカラムサイズを保存する
+            Properties.Settings.Default.ColWidth0 = listMain.Columns[0].Width;
+            Properties.Settings.Default.ColWidth1 = listMain.Columns[1].Width;
+            Properties.Settings.Default.ColWidth2 = listMain.Columns[2].Width;
+            Properties.Settings.Default.ColWidth3 = listMain.Columns[3].Width;
+            Properties.Settings.Default.ColWidth4 = listMain.Columns[4].Width;
+            Properties.Settings.Default.Save();
 
             // 設定を保存する
             SaveSettings();
@@ -1095,10 +1122,18 @@ namespace MizuMail
                 listViewItemSorter = ListViewItemComparer.Default;
                 listMain.ListViewItemSorter = listViewItemSorter;
                 richTextBody.DetectUrls = true;
+                toolFilterCombo.SelectedIndex = 0;
 
                 // ツリービューとリストビューの表示を更新する
                 UpdateView();
             }
+
+            // listMainのカラムサイズを復元する
+            listMain.Columns[0].Width = Properties.Settings.Default.ColWidth0;
+            listMain.Columns[1].Width = Properties.Settings.Default.ColWidth1;
+            listMain.Columns[2].Width = Properties.Settings.Default.ColWidth2;
+            listMain.Columns[3].Width = Properties.Settings.Default.ColWidth3;
+            listMain.Columns[4].Width = Properties.Settings.Default.ColWidth4;
 
             // 定期受信タイマーを設定する
             SetTimer(Mail.checkMail, Mail.checkInterval);
@@ -1416,10 +1451,21 @@ namespace MizuMail
 
         private void richTextBody_LinkClicked(object sender, LinkClickedEventArgs e)
         {
-            // URLを開くかの確認をする
-            if (MessageBox.Show("クリックしたURL\n" + e.LinkText + "\nを開きますか？\nページによっては詐欺のページやウイルスの可能性もあるため\n注意してURLを開いてください。", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            string url = e.LinkText;
+
+            // URL の安全性チェック
+            var result = CheckUrlSafety(url);
+
+            if (!result.IsSafe)
             {
-                System.Diagnostics.Process.Start(e.LinkText);
+                MessageBox.Show( $"このリンクは安全ではない可能性があります。\n理由: {result.Reason}", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 開く前に確認
+            if (MessageBox.Show($"リンクを開きますか？\n{url}", "リンクを開く", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                System.Diagnostics.Process.Start(url);
             }
         }
 
@@ -2297,7 +2343,7 @@ namespace MizuMail
             else if (listMain.Columns[0].Text == "差出人または宛先") // ごみ箱
                 mailPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
             else if (listMain.Columns[0].Text == "宛先") // 送信
-                mailPath = ""; // 送信メールはファイルがない場合もある
+                mailPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", mail.mailName);
 
             // 未読解除（受信 or ごみ箱）
             if (listMain.Columns[0].Text != "宛先")
@@ -2351,7 +2397,17 @@ namespace MizuMail
             }
             else
             {
-                // 送信メール（ファイルがない場合）
+                // 送信メール(ファイルを置くように変更になったのでファイルを読み込む形式に変更)
+                if(!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath) && mailPath.Contains(".mail"))
+                {
+                    // 送信メールを読み込む
+                    mail = LoadSendMail(mailPath);
+                    if (mail == null)
+                    {
+                        MessageBox.Show("メールの読み込みに失敗しました。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                }
                 browserMail.Visible = false;
                 richTextBody.Visible = true;
                 richTextBody.Text = mail.body;
@@ -2515,6 +2571,94 @@ namespace MizuMail
             {
                 collectionMail[SEND].Add(mail);
             }
+        }
+
+        /// <summary>
+        /// 送信メールの読み出しメソッド
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public Mail LoadSendMail(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return null;
+
+            try
+            {
+                string json = File.ReadAllText(filePath, Encoding.UTF8);
+                Mail mail = JsonConvert.DeserializeObject<Mail>(json);
+
+                // 読み込んだ Mail に mailName を付与（ファイル名から）
+                if (mail != null)
+                {
+                    mail.mailName = Path.GetFileName(filePath);
+                }
+
+                return mail;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public class UrlCheckResult
+        {
+            public bool IsSafe { get; set; }
+            public string Reason { get; set; }
+        }
+
+        private UrlCheckResult CheckUrlSafety(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return new UrlCheckResult { IsSafe = false, Reason = "URL が空です" };
+
+            // 1. http/https 以外は拒否
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+                return new UrlCheckResult { IsSafe = false, Reason = "http/https 以外のプロトコル" };
+
+            // 2. javascript: や file: を拒否
+            if (url.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
+                return new UrlCheckResult { IsSafe = false, Reason = "JavaScript スキーム" };
+
+            if (url.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+                return new UrlCheckResult { IsSafe = false, Reason = "ローカルファイルアクセス" };
+
+            // 3. URL が長すぎる（フィッシングの典型）
+            if (url.Length > 2048)
+                return new UrlCheckResult { IsSafe = false, Reason = "URL が異常に長い" };
+
+            // 4. ドメイン部分を抽出
+            Uri uri;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out uri))
+                return new UrlCheckResult { IsSafe = false, Reason = "URL が不正" };
+
+            string host = uri.Host;
+
+            // 5. 国際化ドメインを punycode に変換
+            try
+            {
+                var idn = new System.Globalization.IdnMapping();
+                host = idn.GetAscii(host);
+            }
+            catch
+            {
+                return new UrlCheckResult { IsSafe = false, Reason = "国際化ドメインが不正" };
+            }
+
+            // 6. 似た文字の混在（フィッシング対策）
+            if (ContainsMixedScripts(host))
+                return new UrlCheckResult { IsSafe = false, Reason = "ドメインに混在文字（フィッシングの可能性）" };
+
+            return new UrlCheckResult { IsSafe = true };
+        }
+
+        private bool ContainsMixedScripts(string text)
+        {
+            bool hasLatin = text.Any(c => c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z');
+            bool hasNonLatin = text.Any(c => c > 127);
+
+            return hasLatin && hasNonLatin;
         }
 
     }

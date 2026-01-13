@@ -22,5 +22,65 @@ namespace MizuMail.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("150")]
+        public int ColWidth0 {
+            get {
+                return ((int)(this["ColWidth0"]));
+            }
+            set {
+                this["ColWidth0"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        public int ColWidth1 {
+            get {
+                return ((int)(this["ColWidth1"]));
+            }
+            set {
+                this["ColWidth1"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("120")]
+        public int ColWidth2 {
+            get {
+                return ((int)(this["ColWidth2"]));
+            }
+            set {
+                this["ColWidth2"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        public int ColWidth3 {
+            get {
+                return ((int)(this["ColWidth3"]));
+            }
+            set {
+                this["ColWidth3"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ColWidth4 {
+            get {
+                return ((int)(this["ColWidth4"]));
+            }
+            set {
+                this["ColWidth4"] = value;
+            }
+        }
     }
 }
