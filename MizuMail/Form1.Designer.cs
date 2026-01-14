@@ -83,6 +83,10 @@ namespace MizuMail
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.treeMain = new System.Windows.Forms.TreeView();
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuCreateFolder = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuRenameFolder = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuDeleteFolder = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem7 = new System.Windows.Forms.ToolStripSeparator();
             this.menuClearTrush = new System.Windows.Forms.ToolStripMenuItem();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
@@ -511,10 +515,12 @@ namespace MizuMail
             // 
             // treeMain
             // 
+            this.treeMain.AllowDrop = true;
             this.treeMain.ContextMenuStrip = this.contextMenuStrip2;
             this.treeMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treeMain.ImageIndex = 0;
             this.treeMain.ImageList = this.imageList1;
+            this.treeMain.LabelEdit = true;
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
@@ -538,20 +544,53 @@ namespace MizuMail
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
+            this.treeMain.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.treeMain_AfterLabelEdit);
             this.treeMain.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeMain_AfterSelect);
+            this.treeMain.DragDrop += new System.Windows.Forms.DragEventHandler(this.treeMain_DragDrop);
+            this.treeMain.DragOver += new System.Windows.Forms.DragEventHandler(this.treeMain_DragOver);
             // 
             // contextMenuStrip2
             // 
             this.contextMenuStrip2.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.contextMenuStrip2.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuCreateFolder,
+            this.menuRenameFolder,
+            this.menuDeleteFolder,
+            this.toolStripMenuItem7,
             this.menuClearTrush});
             this.contextMenuStrip2.Name = "contextMenuStrip2";
-            this.contextMenuStrip2.Size = new System.Drawing.Size(196, 28);
+            this.contextMenuStrip2.Size = new System.Drawing.Size(211, 134);
+            // 
+            // menuCreateFolder
+            // 
+            this.menuCreateFolder.Name = "menuCreateFolder";
+            this.menuCreateFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuCreateFolder.Text = "フォルダの作成(&C)";
+            this.menuCreateFolder.Click += new System.EventHandler(this.menuCreateFolder_Click);
+            // 
+            // menuRenameFolder
+            // 
+            this.menuRenameFolder.Name = "menuRenameFolder";
+            this.menuRenameFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuRenameFolder.Text = "名前の変更(&R)";
+            this.menuRenameFolder.Click += new System.EventHandler(this.menuRenameFolder_Click);
+            // 
+            // menuDeleteFolder
+            // 
+            this.menuDeleteFolder.Name = "menuDeleteFolder";
+            this.menuDeleteFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuDeleteFolder.Text = "フォルダの削除(&D)";
+            this.menuDeleteFolder.Click += new System.EventHandler(this.menuDeleteFolder_Click);
+            // 
+            // toolStripMenuItem7
+            // 
+            this.toolStripMenuItem7.Name = "toolStripMenuItem7";
+            this.toolStripMenuItem7.Size = new System.Drawing.Size(207, 6);
             // 
             // menuClearTrush
             // 
             this.menuClearTrush.Name = "menuClearTrush";
-            this.menuClearTrush.Size = new System.Drawing.Size(195, 24);
+            this.menuClearTrush.Size = new System.Drawing.Size(210, 24);
             this.menuClearTrush.Text = "ごみ箱を空にする(&Y)";
             this.menuClearTrush.Click += new System.EventHandler(this.menuClearTrush_Click);
             // 
@@ -606,6 +645,7 @@ namespace MizuMail
             this.listMain.UseCompatibleStateImageBehavior = false;
             this.listMain.View = System.Windows.Forms.View.Details;
             this.listMain.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.listMain_ColumnClick);
+            this.listMain.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.listMain_ItemDrag);
             this.listMain.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.listMain_ItemSelectionChanged);
             this.listMain.SelectedIndexChanged += new System.EventHandler(this.listMain_SelectedIndexChanged);
             this.listMain.DoubleClick += new System.EventHandler(this.listMain_DoubleClick);
@@ -815,6 +855,10 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem menuHelpView;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem8;
+        private System.Windows.Forms.ToolStripMenuItem menuCreateFolder;
+        private System.Windows.Forms.ToolStripMenuItem menuDeleteFolder;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem7;
+        private System.Windows.Forms.ToolStripMenuItem menuRenameFolder;
     }
 }
 

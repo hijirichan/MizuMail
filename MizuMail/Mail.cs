@@ -37,6 +37,8 @@ namespace MizuMail
         public string uidl;                     // UIDL
         public bool notReadYet;                 // 未読、未送信ならtrue
         public string id { get; set; } = Guid.NewGuid().ToString(); // メールの一意識別子
+        public string folder = "inbox";         // メールフォルダ名
+        public string lastFolder = "";          // 直前のメールフォルダ名
 
         // コンストラクタ
         public Mail(string address, string cc, string bcc, string subject, string body, string atach, string date, string mailName, string uidl, bool notReadYet)
