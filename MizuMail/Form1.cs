@@ -929,123 +929,90 @@ namespace MizuMail
 
         private void menuDelete_Click(object sender, EventArgs e)
         {
-            // 選択アイテムをスナップショット（変更中のコレクション破壊を防ぐ）
             var selectedItems = listMain.SelectedItems.Cast<ListViewItem>().ToList();
             if (selectedItems.Count == 0)
                 return;
 
-            // ごみ箱内の削除対象を集める（確認ダイアログ用）
             var trashMails = new List<Mail>();
 
-            // まずごみ箱以外の移動処理（受信→ごみ箱、送信→ごみ箱）
             foreach (var item in selectedItems)
             {
-                if (!(item.Tag is Mail))
+                if (!(item.Tag is Mail mail))
                     continue;
 
-                var mail = (Mail)item.Tag;
+                string folder = (mail.folder ?? "inbox").Replace("\\", "/");
 
                 // ごみ箱内の項目は後でまとめて処理
-                if (selectedItems.Count == 1 && listMain.Columns[0].Text != "差出人または宛先")
+                if (selectedItems.Count == 1 && folder != "trush")
                 {
                     // 単一選択の場合は個別確認ダイアログを表示
                     if (MessageBox.Show("選択したメール「" + mail.subject + "」を削除しますか？", "確認", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                         continue;
                 }
 
-                if (listMain.Columns[0].Text == "差出人")
+                // ★ ごみ箱内 → 完全削除へ回す
+                if (folder == "trush")
                 {
-                    // 受信メールの場合：ファイルを移動してごみ箱コレクションへ
-                    string src = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "inbox", mail.mailName);
-                    string dst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
-                    try
-                    {
-                        if (File.Exists(src))
-                        {
-                            // 既に同名ファイルがごみ箱にあれば上書きを避けるためユニーク化
-                            if (File.Exists(dst))
-                            {
-                                string uniqueDst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", Guid.NewGuid().ToString() + "_" + mail.mailName);
-                                File.Move(src, uniqueDst);
-                                mail.mailName = Path.GetFileName(uniqueDst);
-                            }
-                            else
-                            {
-                                File.Move(src, dst);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error($"Move error: {ex.Message}");
-                    }
-
-                    collectionMail[DELETE].Add(mail);
-                    collectionMail[RECEIVE].Remove(mail);
-                }
-                else if (listMain.Columns[0].Text == "宛先")
-                {
-                    // 送信メールの場合：ごみ箱コレクションへ
-                    string src = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", mail.mailName);
-                    string dst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
-                    try
-                    {
-                        if (File.Exists(src))
-                        {
-                            // 既に同名ファイルがごみ箱にあれば上書きを避けるためユニーク化
-                            if (File.Exists(dst))
-                            {
-                                string uniqueDst = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", Guid.NewGuid().ToString() + "_" + mail.mailName);
-                                File.Move(src, uniqueDst);
-                                mail.mailName = Path.GetFileName(uniqueDst);
-                            }
-                            else
-                            {
-                                File.Move(src, dst);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error($"Move error: {ex.Message}");
-                    }
-
-                    collectionMail[DELETE].Add(mail);
-                    collectionMail[SEND].Remove(mail);
-                }
-                else if (listMain.Columns[0].Text == "差出人または宛先")
-                {
-                    // ごみ箱内の項目は後で確認して完全削除
                     trashMails.Add(mail);
+                    continue;
                 }
+
+                // ★ 元のパス
+                string oldPath = ResolveMailPath(mail);
+
+                // ★ ごみ箱のパス
+                string trushDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush");
+                Directory.CreateDirectory(trushDir);
+
+                string newPath = Path.Combine(trushDir, mail.mailName);
+
+                // ★ ファイル移動
+                if (File.Exists(oldPath))
+                {
+                    if (File.Exists(newPath))
+                    {
+                        string unique = Guid.NewGuid().ToString() + "_" + mail.mailName;
+                        newPath = Path.Combine(trushDir, unique);
+                        File.Move(oldPath, newPath);
+                        mail.mailName = unique;
+                    }
+                    else
+                    {
+                        File.Move(oldPath, newPath);
+                    }
+                }
+
+                // ★ collectionMail の整合性
+                if (folder == "inbox")
+                    collectionMail[RECEIVE].Remove(mail);
+                else if (folder == "send")
+                    collectionMail[SEND].Remove(mail);
+
+                // ★ Undo 用
+                mail.lastFolder = folder;
+
+                // ★ ごみ箱へ
+                mail.folder = "trush";
+                collectionMail[DELETE].Add(mail);
             }
 
-            // ごみ箱内削除はまとめて確認
+            // ★ ごみ箱内の完全削除
             if (trashMails.Count > 0)
             {
-                var msg = $"選択したごみ箱内メール {trashMails.Count} 件は完全に削除されます。\r\nよろしいですか？";
+                var msg = $"選択したごみ箱内メール {trashMails.Count} 件を完全に削除します。";
                 if (MessageBox.Show(msg, "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
                 {
                     foreach (var mail in trashMails)
                     {
-                        try
-                        {
-                            string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
-                            if (File.Exists(path))
-                            {
-                                File.Delete(path);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error($"Delete error: {ex.Message}");
-                        }
+                        string path = ResolveMailPath(mail);
+                        if (File.Exists(path))
+                            File.Delete(path);
+
                         collectionMail[DELETE].Remove(mail);
                     }
                 }
             }
 
-            // 表示を更新
             UpdateView();
         }
 
@@ -1399,29 +1366,29 @@ namespace MizuMail
 
         private void menuClearTrush_Click(object sender, EventArgs e)
         {
-            // ごみ箱内の全削除確認
-            if (MessageBox.Show("ごみ箱内のメールをすべて完全に削除します。\r\nよろしいですか？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+            string trushDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush");
+
+            if (MessageBox.Show("ごみ箱を空にします。よろしいですか？",
+                "確認", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+                return;
+
+            if (Directory.Exists(trushDir))
             {
-                // ArrayListはToList()を持たないため、Cast<Mail>()でIEnumerable<Mail>にし、ToArray()でスナップショットを作成
-                foreach (Mail mail in collectionMail[DELETE].Cast<Mail>().ToArray())
+                foreach (var file in Directory.GetFiles(trushDir, "*.eml"))
                 {
-                    try
-                    {
-                        string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
-                        if (File.Exists(path))
-                        {
-                            File.Delete(path);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error($"Delete error: {ex.Message}");
-                    }
-                    collectionMail[DELETE].Remove(mail);
+                    try { File.Delete(file); }
+                    catch { }
                 }
-                // 表示を更新
-                UpdateView();
+                foreach (var file in Directory.GetFiles(trushDir, "*.mail"))
+                {
+                    try { File.Delete(file); }
+                    catch { }
+                }
             }
+
+            collectionMail[DELETE].Clear();
+
+            UpdateView();
         }
 
         private void menuHelpAbout_Click(object sender, EventArgs e)
@@ -1444,66 +1411,69 @@ namespace MizuMail
 
         private void menuSaveAs_Click(object sender, EventArgs e)
         {
-            // 選択中のメールをファイルに保存する
             if (currentMail == null)
                 return;
 
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.FileName = currentMail.subject + ".eml";
-            sfd.Filter = "EMLファイル (*.eml)|*.eml|すべてのファイル (*.*)|*.*";
-            sfd.FilterIndex = 0;
-            sfd.RestoreDirectory = true;
-            sfd.OverwritePrompt = true;
-
-            if (sfd.ShowDialog() == DialogResult.OK)
+            using (SaveFileDialog sfd = new SaveFileDialog())
             {
-                string mailPath = "";
-                // mailPath は現在表示しているフォルダに応じて決定
-                if (listMain.Columns[0].Text == "差出人")
+                sfd.FileName = currentMail.subject + ".eml";
+                sfd.Filter = "EMLファイル (*.eml)|*.eml|すべてのファイル (*.*)|*.*";
+                sfd.FilterIndex = 0;
+                sfd.RestoreDirectory = true;
+                sfd.OverwritePrompt = true;
+
+                if (sfd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string folder = (currentMail.folder ?? "inbox").Replace("\\", "/");
+
+                // ★ 送信メール（send / send/...）は .mail なので再構築
+                if (folder == "send" || folder.StartsWith("send/"))
                 {
-                    // 受信メールの場合
-                    mailPath = System.Windows.Forms.Application.StartupPath + "\\mbox\\inbox\\";
-                }
-                else if (listMain.Columns[0].Text == "宛先")
-                {
-                    // 送信メールの場合
-                    mailPath = "";
-                }
-                else if (listMain.Columns[0].Text == "差出人または宛先")
-                {
-                    // ごみ箱の場合
-                    mailPath = System.Windows.Forms.Application.StartupPath + "\\mbox\\trush\\";
-                }
-                if (!string.IsNullOrEmpty(mailPath) && File.Exists(mailPath + currentMail.mailName))
-                {
-                    File.Copy(mailPath + currentMail.mailName, sfd.FileName, true);
-                }
-                else
-                {
-                    // 送信メールの場合は新規に EML ファイルを作成する
                     var message = new MimeMessage();
-                    message.From.Add(MailboxAddress.Parse(Mail.userAddress));
-                    message.To.Add(MailboxAddress.Parse(currentMail.address));
-                    message.Subject = currentMail.subject;
+
+                    // From / To / Cc / Bcc
+                    if (!string.IsNullOrWhiteSpace(Mail.userAddress))
+                        message.From.Add(MailboxAddress.Parse(Mail.userAddress));
+
+                    if (!string.IsNullOrWhiteSpace(currentMail.address))
+                        message.To.Add(MailboxAddress.Parse(currentMail.address));
+
+                    if (!string.IsNullOrWhiteSpace(currentMail.ccaddress))
+                        message.Cc.AddRange(
+                            currentMail.ccaddress.Split(';')
+                                .Select(x => x.Trim())
+                                .Where(x => x != "")
+                                .Select(MailboxAddress.Parse)
+                        );
+
+                    if (!string.IsNullOrWhiteSpace(currentMail.bccaddress))
+                        message.Bcc.AddRange(
+                            currentMail.bccaddress.Split(';')
+                                .Select(x => x.Trim())
+                                .Where(x => x != "")
+                                .Select(MailboxAddress.Parse)
+                        );
+
+                    message.Subject = currentMail.subject ?? "";
 
                     var textPart = new TextPart(TextFormat.Text)
                     {
-                        Text = currentMail.body,
+                        Text = currentMail.body ?? ""
                     };
 
-                    // 添付ファイルの確認
-                    var files = currentMail.atach.Split(';').Select(f => f.Trim()).Where(f => File.Exists(f));
+                    var files = (currentMail.atach ?? "")
+                        .Split(';')
+                        .Select(f => f.Trim())
+                        .Where(f => File.Exists(f));
 
-                    // 添付ファイルが複数ある場合
-                    if (!string.IsNullOrWhiteSpace(currentMail.atach) && files.Count() > 0)
+                    if (!string.IsNullOrWhiteSpace(currentMail.atach) && files.Any())
                     {
-                        // マルチパートを作成して添付ファイルを添付する
                         var multipart = new Multipart("mixed");
                         multipart.Add(textPart);
+
                         foreach (var file in files)
                         {
-                            if (!File.Exists(file))
-                                continue;
                             var attachment = new MimePart()
                             {
                                 Content = new MimeContent(File.OpenRead(file)),
@@ -1519,9 +1489,23 @@ namespace MizuMail
                     {
                         message.Body = textPart;
                     }
+
                     using (var stream = File.Create(sfd.FileName))
                     {
                         message.WriteTo(stream);
+                    }
+                }
+                else
+                {
+                    // ★ 受信・ごみ箱・サブフォルダ → 既存の .eml をコピー
+                    string src = ResolveMailPath(currentMail);
+                    if (!string.IsNullOrEmpty(src) && File.Exists(src))
+                    {
+                        File.Copy(src, sfd.FileName, true);
+                    }
+                    else
+                    {
+                        MessageBox.Show("メールファイルが見つかりません。", "エラー");
                     }
                 }
             }
@@ -2230,20 +2214,20 @@ namespace MizuMail
         {
             string folder = (mail.folder ?? "").Replace("\\", "/");
 
-            // ★ 送信メール
-            if(folder == "send" || folder.StartsWith("send/"))
+            // ★ 送信メール（send または send/...）
+            if (folder == "send" || folder.StartsWith("send/"))
             {
                 return Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "send", mail.mailName);
             }
 
-            // ★ 受信メール（inbox または inbox/xxx）
+            // ★ 受信メール（inbox または inbox/...）
             if (folder.StartsWith("inbox"))
             {
                 return Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", folder.Replace("/", "\\"), mail.mailName);
             }
 
-            // ★ ごみ箱
-            if (folder == "trush")
+            // ★ ごみ箱（trush または trush/...）
+            if (folder == "trush" || folder.StartsWith("trush/"))
             {
                 return Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trush", mail.mailName);
             }
@@ -2517,69 +2501,74 @@ namespace MizuMail
             if (e.Label == null)
                 return; // キャンセル
 
-            string newName = e.Label.Trim();
-            if (newName == "")
-            {
-                e.CancelEdit = true;
-                MessageBox.Show("フォルダ名を入力してください。", "フォルダ名変更", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            TreeNode node = e.Node;
 
             TreeNode inboxNode = treeMain.Nodes[0].Nodes[0];
 
             // ★ 受信メール直下のフォルダだけ許可
-            if (e.Node.Parent != inboxNode)
-                return;
-
-            string oldName = e.Node.Text;
-
-            // ★ 同名フォルダチェック
-            foreach (TreeNode child in inboxNode.Nodes)
+            if (node.Parent != inboxNode)
             {
-                if (child != e.Node && child.Text == newName)
-                {
-                    e.CancelEdit = true;
-                    MessageBox.Show("同じ名前のフォルダがあります。", "フォルダ名変更", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                e.CancelEdit = true;
+                return;
             }
 
+            string oldFolder = node.Tag.ToString();   // inbox/仕事
+            string parentFolder = "inbox";            // inbox 固定
+            string newFolder = parentFolder + "/" + e.Label; // inbox/新しい名前
+
             // ★ 実フォルダのパス
-            string oldDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "inbox", oldName);
-            string newDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "inbox", newName);
+            string oldDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", oldFolder.Replace("/", "\\"));
+            string newDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", newFolder.Replace("/", "\\"));
 
             try
             {
-                // ★ 実フォルダをリネーム
+                // ★ ディレクトリ名変更
                 if (Directory.Exists(oldDir))
                     Directory.Move(oldDir, newDir);
-
-                // ★ mail.folder を更新（inbox/新しい名前）
-                UpdateMailFolderPaths(oldName, newName);
             }
-            catch (Exception ex)
+            catch
             {
+                MessageBox.Show("フォルダ名を変更できませんでした。");
                 e.CancelEdit = true;
-                MessageBox.Show($"フォルダ名の変更に失敗しました。\n{ex.Message}",
-                    "フォルダ名変更", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // ★ 表示更新
+            // ★ TreeNode の Tag を更新
+            node.Tag = newFolder;
+
+            // ★ サブフォルダの Tag を再帰的に更新
+            UpdateChildFolderTags(node, oldFolder, newFolder);
+
+            // ★ メールの folder を更新
+            UpdateMailFolderPaths(oldFolder, newFolder);
+
             UpdateListView();
             UpdateTreeView();
         }
 
-        private void UpdateMailFolderPaths(string oldName, string newName)
+        private void UpdateChildFolderTags(TreeNode parent, string oldBase, string newBase)
         {
-            string oldFolder = $"inbox/{oldName}";
-            string newFolder = $"inbox/{newName}";
-
-            // ★ 受信メール（collectionMail[RECEIVE]）の中で folder を更新
-            foreach (Mail mail in collectionMail[RECEIVE])
+            foreach (TreeNode child in parent.Nodes)
             {
-                if (mail.folder == oldFolder)
-                    mail.folder = newFolder;
+                string oldTag = child.Tag.ToString();
+                string newTag = oldTag.Replace(oldBase, newBase);
+                child.Tag = newTag;
+
+                UpdateChildFolderTags(child, oldBase, newBase);
+            }
+        }
+
+        private void UpdateMailFolderPaths(string oldBase, string newBase)
+        {
+            foreach (var col in collectionMail)
+            {
+                foreach (Mail mail in col)
+                {
+                    if (mail.folder != null && mail.folder.StartsWith(oldBase))
+                    {
+                        mail.folder = mail.folder.Replace(oldBase, newBase);
+                    }
+                }
             }
         }
 
@@ -2667,13 +2656,14 @@ namespace MizuMail
 
                 bool notReadYet = original?.notReadYet ?? false;
                 string attach = original?.atach;
+                string body = msg.TextBody ?? msg.HtmlBody ?? "";
 
                 Mail mail = new Mail(
                     msg.From.ToString(),
                     msg.Cc.ToString(),
                     msg.Bcc.ToString(),
                     msg.Subject,
-                    msg.TextBody,
+                    body,
                     attach,
                     msg.Date.ToString(),
                     mailName,

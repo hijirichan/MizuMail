@@ -559,38 +559,38 @@ namespace MizuMail
             this.toolStripMenuItem7,
             this.menuClearTrush});
             this.contextMenuStrip2.Name = "contextMenuStrip2";
-            this.contextMenuStrip2.Size = new System.Drawing.Size(211, 134);
+            this.contextMenuStrip2.Size = new System.Drawing.Size(196, 106);
             // 
             // menuCreateFolder
             // 
             this.menuCreateFolder.Name = "menuCreateFolder";
-            this.menuCreateFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuCreateFolder.Size = new System.Drawing.Size(195, 24);
             this.menuCreateFolder.Text = "フォルダの作成(&C)";
             this.menuCreateFolder.Click += new System.EventHandler(this.menuCreateFolder_Click);
             // 
             // menuRenameFolder
             // 
             this.menuRenameFolder.Name = "menuRenameFolder";
-            this.menuRenameFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuRenameFolder.Size = new System.Drawing.Size(195, 24);
             this.menuRenameFolder.Text = "名前の変更(&R)";
             this.menuRenameFolder.Click += new System.EventHandler(this.menuRenameFolder_Click);
             // 
             // menuDeleteFolder
             // 
             this.menuDeleteFolder.Name = "menuDeleteFolder";
-            this.menuDeleteFolder.Size = new System.Drawing.Size(210, 24);
+            this.menuDeleteFolder.Size = new System.Drawing.Size(195, 24);
             this.menuDeleteFolder.Text = "フォルダの削除(&D)";
             this.menuDeleteFolder.Click += new System.EventHandler(this.menuDeleteFolder_Click);
             // 
             // toolStripMenuItem7
             // 
             this.toolStripMenuItem7.Name = "toolStripMenuItem7";
-            this.toolStripMenuItem7.Size = new System.Drawing.Size(207, 6);
+            this.toolStripMenuItem7.Size = new System.Drawing.Size(192, 6);
             // 
             // menuClearTrush
             // 
             this.menuClearTrush.Name = "menuClearTrush";
-            this.menuClearTrush.Size = new System.Drawing.Size(210, 24);
+            this.menuClearTrush.Size = new System.Drawing.Size(195, 24);
             this.menuClearTrush.Text = "ごみ箱を空にする(&Y)";
             this.menuClearTrush.Click += new System.EventHandler(this.menuClearTrush_Click);
             // 
