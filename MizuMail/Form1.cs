@@ -1231,17 +1231,11 @@ namespace MizuMail
         private void buttonAtachMenu_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             // ファイルを開くかの確認をする
-            if (MessageBox.Show(e.ClickedItem.Text + "を開きますか？\nファイルによってはウイルスの可能性もあるため\n注意してファイルを開いてください。", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+            DialogResult result = MessageBox.Show(e.ClickedItem.Text + "を開きますか？\nファイルによってはウイルスの可能性もあるため\n注意してファイルを開いてください。", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+            if (result == DialogResult.Yes)
             {
-                // 送信メールで添付ファイルが存在する場合
-                if (currentMail.atach != string.Empty)
-                {
-                    System.Diagnostics.Process.Start(e.ClickedItem.Text);
-                }
-                else
-                {
-                    System.Diagnostics.Process.Start(System.Windows.Forms.Application.StartupPath + "\\mbox\\tmp\\" + e.ClickedItem.Text);
-                }
+                // 添付ファイルを開く
+                System.Diagnostics.Process.Start(System.Windows.Forms.Application.StartupPath + "\\mbox\\tmp\\" + e.ClickedItem.Text);
             }
         }
 
@@ -2175,7 +2169,7 @@ namespace MizuMail
                                 part.Content.DecodeTo(stream);
 
                             var menuItem = new ToolStripMenuItem(fileName);
-                            menuItem.Click += (s, e) => System.Diagnostics.Process.Start(savePath);
+                            //menuItem.Click += (s, e) => System.Diagnostics.Process.Start(savePath);
                             buttonAtachMenu.DropDownItems.Add(menuItem);
                         }
                     }
