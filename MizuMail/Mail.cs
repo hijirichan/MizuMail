@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MailKit;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,6 +38,7 @@ namespace MizuMail
         public string uidl;                     // UIDL
         public bool notReadYet;                 // 未読、未送信ならtrue
         public string id { get; set; } = Guid.NewGuid().ToString(); // メールの一意識別子
+        public MailFolder Folder { get; set; }  // メールフォルダ情報
         public string folder = "inbox";         // メールフォルダ名
         public string lastFolder = "";          // 直前のメールフォルダ名
 

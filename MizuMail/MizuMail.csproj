@@ -114,6 +114,7 @@
     <Compile Include="AboutForm.Designer.cs">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="FolderManager.cs" />
     <Compile Include="Prompt.cs" />
     <Compile Include="FindDialog.cs">
       <SubType>Form</SubType>
@@ -179,7 +180,7 @@
       <DependentUpon>ReplaceDialog.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="NLog.config">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">

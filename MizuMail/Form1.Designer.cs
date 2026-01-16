@@ -42,7 +42,7 @@ namespace MizuMail
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripSeparator();
-            this.menuFileClearTrush = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuFileClearTrash = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
             this.menuAppExit = new System.Windows.Forms.ToolStripMenuItem();
             this.menuMail = new System.Windows.Forms.ToolStripMenuItem();
@@ -87,7 +87,7 @@ namespace MizuMail
             this.menuRenameFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.menuDeleteFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem7 = new System.Windows.Forms.ToolStripSeparator();
-            this.menuClearTrush = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuClearTrash = new System.Windows.Forms.ToolStripMenuItem();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.listMain = new System.Windows.Forms.ListView();
@@ -141,7 +141,7 @@ namespace MizuMail
             this.ファイルFToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.menuSaveAs,
             this.toolStripMenuItem4,
-            this.menuFileClearTrush,
+            this.menuFileClearTrash,
             this.toolStripMenuItem3,
             this.menuAppExit});
             this.ファイルFToolStripMenuItem.Name = "ファイルFToolStripMenuItem";
@@ -161,13 +161,13 @@ namespace MizuMail
             this.toolStripMenuItem4.Name = "toolStripMenuItem4";
             this.toolStripMenuItem4.Size = new System.Drawing.Size(289, 6);
             // 
-            // menuFileClearTrush
+            // menuFileClearTrash
             // 
-            this.menuFileClearTrush.Name = "menuFileClearTrush";
-            this.menuFileClearTrush.Size = new System.Drawing.Size(292, 26);
-            this.menuFileClearTrush.Text = "ごみ箱を空にする(&Y)";
-            this.menuFileClearTrush.ToolTipText = "ごみ箱フォルダのメールを削除します。";
-            this.menuFileClearTrush.Click += new System.EventHandler(this.menuClearTrush_Click);
+            this.menuFileClearTrash.Name = "menuFileClearTrash";
+            this.menuFileClearTrash.Size = new System.Drawing.Size(292, 26);
+            this.menuFileClearTrash.Text = "ごみ箱を空にする(&Y)";
+            this.menuFileClearTrash.ToolTipText = "ごみ箱フォルダのメールを削除します。";
+            this.menuFileClearTrash.Click += new System.EventHandler(this.menuClearTrash_Click);
             // 
             // toolStripMenuItem3
             // 
@@ -547,6 +547,7 @@ namespace MizuMail
             this.treeMain.AfterLabelEdit += new System.Windows.Forms.NodeLabelEditEventHandler(this.treeMain_AfterLabelEdit);
             this.treeMain.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeMain_AfterSelect);
             this.treeMain.DragDrop += new System.Windows.Forms.DragEventHandler(this.treeMain_DragDrop);
+            this.treeMain.DragEnter += new System.Windows.Forms.DragEventHandler(this.treeMain_DragEnter);
             this.treeMain.DragOver += new System.Windows.Forms.DragEventHandler(this.treeMain_DragOver);
             // 
             // contextMenuStrip2
@@ -557,7 +558,7 @@ namespace MizuMail
             this.menuRenameFolder,
             this.menuDeleteFolder,
             this.toolStripMenuItem7,
-            this.menuClearTrush});
+            this.menuClearTrash});
             this.contextMenuStrip2.Name = "contextMenuStrip2";
             this.contextMenuStrip2.Size = new System.Drawing.Size(196, 106);
             // 
@@ -587,12 +588,12 @@ namespace MizuMail
             this.toolStripMenuItem7.Name = "toolStripMenuItem7";
             this.toolStripMenuItem7.Size = new System.Drawing.Size(192, 6);
             // 
-            // menuClearTrush
+            // menuClearTrash
             // 
-            this.menuClearTrush.Name = "menuClearTrush";
-            this.menuClearTrush.Size = new System.Drawing.Size(195, 24);
-            this.menuClearTrush.Text = "ごみ箱を空にする(&Y)";
-            this.menuClearTrush.Click += new System.EventHandler(this.menuClearTrush_Click);
+            this.menuClearTrash.Name = "menuClearTrash";
+            this.menuClearTrash.Size = new System.Drawing.Size(195, 24);
+            this.menuClearTrash.Text = "ごみ箱を空にする(&Y)";
+            this.menuClearTrash.Click += new System.EventHandler(this.menuClearTrash_Click);
             // 
             // imageList1
             // 
@@ -826,7 +827,7 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripButton toolDeleteButton;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip2;
-        private System.Windows.Forms.ToolStripMenuItem menuClearTrush;
+        private System.Windows.Forms.ToolStripMenuItem menuClearTrash;
         private System.Windows.Forms.ToolStripMenuItem menuMail;
         private System.Windows.Forms.ToolStripMenuItem menuMailSend;
         private System.Windows.Forms.ToolStripMenuItem menuMailReceive;
@@ -839,7 +840,7 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuHelpAbout;
         private System.Windows.Forms.Timer timerAutoReceive;
         private System.Windows.Forms.ToolStripMenuItem menuSaveAs;
-        private System.Windows.Forms.ToolStripMenuItem menuFileClearTrush;
+        private System.Windows.Forms.ToolStripMenuItem menuFileClearTrash;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem3;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem4;
         private System.Windows.Forms.ToolStripMenuItem menuHelpVersionCheck;
