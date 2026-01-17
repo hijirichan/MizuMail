@@ -27,7 +27,8 @@ namespace MizuMail
         public static bool receiveMethod_Pop3;  // 受信方法がPOP3かどうかのフラグ(true:POP3、false:IMAP4)
 
         // インスタンスフィールド(メールの情報)
-        public string address;                  // 差出人または宛先のアドレス
+        public string from;                     // 差出人
+        public string address;                  // 宛先のアドレス
         public string ccaddress;                // CCアドレス
         public string bccaddress;               // BCCアドレス
         public string subject;                  // 件名
@@ -37,12 +38,21 @@ namespace MizuMail
         public string mailName;                 // メールファイル名
         public string uidl;                     // UIDL
         public bool notReadYet;                 // 未読、未送信ならtrue
+        public bool isDraft;                    // 下書き or 未送信
         public string id { get; set; } = Guid.NewGuid().ToString(); // メールの一意識別子
         public MailFolder Folder { get; set; }  // メールフォルダ情報
         public string folder = "inbox";         // メールフォルダ名
         public string lastFolder = "";          // 直前のメールフォルダ名
+        public MailFolder LastFolder; // 直前のフォルダ
+        public string LastMailName;   // 直前のファイル名
 
         // コンストラクタ
+        public Mail()
+        {
+            notReadYet = false;
+            isDraft = false;
+        }
+
         public Mail(string address, string cc, string bcc, string subject, string body, string atach, string date, string mailName, string uidl, bool notReadYet)
         {
             this.address = address;

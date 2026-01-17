@@ -33,11 +33,13 @@ namespace MizuMail
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
             System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
             System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("ごみ箱(0)", 3, 3);
-            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("ごみ箱(0)", 3, 3);
+            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
             treeNode1,
             treeNode2,
-            treeNode3});
+            treeNode3,
+            treeNode4});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -101,6 +103,8 @@ namespace MizuMail
             this.menuUndoMail = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem6 = new System.Windows.Forms.ToolStripSeparator();
             this.menuNotReadYet = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuRead = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.menuSpeechMail = new System.Windows.Forms.ToolStripMenuItem();
             this.browserMail = new System.Windows.Forms.WebBrowser();
             this.richTextBody = new System.Windows.Forms.RichTextBox();
@@ -532,15 +536,17 @@ namespace MizuMail
             treeNode2.Name = "nodeSend";
             treeNode2.SelectedImageIndex = 2;
             treeNode2.Text = "送信メール(0)";
-            treeNode3.ImageIndex = 3;
-            treeNode3.Name = "nodeDelete";
-            treeNode3.SelectedImageIndex = 3;
-            treeNode3.Text = "ごみ箱(0)";
-            treeNode4.ImageIndex = 0;
-            treeNode4.Name = "rootMail";
-            treeNode4.Text = "メール";
+            treeNode3.Name = "nodeDraft";
+            treeNode3.Text = "下書き";
+            treeNode4.ImageIndex = 3;
+            treeNode4.Name = "nodeDelete";
+            treeNode4.SelectedImageIndex = 3;
+            treeNode4.Text = "ごみ箱(0)";
+            treeNode5.ImageIndex = 0;
+            treeNode5.Name = "rootMail";
+            treeNode5.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode4});
+            treeNode5});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
@@ -683,9 +689,11 @@ namespace MizuMail
             this.menuUndoMail,
             this.toolStripMenuItem6,
             this.menuNotReadYet,
+            this.menuRead,
+            this.toolStripSeparator5,
             this.menuSpeechMail});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(178, 106);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(178, 136);
             // 
             // menuDelete
             // 
@@ -712,6 +720,18 @@ namespace MizuMail
             this.menuNotReadYet.Size = new System.Drawing.Size(177, 24);
             this.menuNotReadYet.Text = "未読みにする(&N)";
             this.menuNotReadYet.Click += new System.EventHandler(this.menuNotReadYet_Click);
+            // 
+            // menuRead
+            // 
+            this.menuRead.Name = "menuRead";
+            this.menuRead.Size = new System.Drawing.Size(177, 24);
+            this.menuRead.Text = "既読にする(&Y)";
+            this.menuRead.Click += new System.EventHandler(this.menuRead_Click);
+            // 
+            // toolStripSeparator5
+            // 
+            this.toolStripSeparator5.Name = "toolStripSeparator5";
+            this.toolStripSeparator5.Size = new System.Drawing.Size(174, 6);
             // 
             // menuSpeechMail
             // 
@@ -860,6 +880,8 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuDeleteFolder;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem7;
         private System.Windows.Forms.ToolStripMenuItem menuRenameFolder;
+        private System.Windows.Forms.ToolStripMenuItem menuRead;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
     }
 }
 

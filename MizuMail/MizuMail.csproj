@@ -150,6 +150,7 @@
     <Compile Include="ReplaceDialog.Designer.cs">
       <DependentUpon>ReplaceDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="UndoMeta.cs" />
     <EmbeddedResource Include="AboutForm.resx">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </EmbeddedResource>

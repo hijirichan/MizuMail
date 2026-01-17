@@ -11,6 +11,7 @@ namespace MizuMail
         Inbox,
         Send,
         Trash,
+        Draft,
         InboxSub
     }
 
@@ -35,6 +36,7 @@ namespace MizuMail
         public MailFolder Inbox { get; }
         public MailFolder Send { get; }
         public MailFolder Trash { get; }
+        public MailFolder Draft { get; }
 
         public List<MailFolder> InboxSubFolders { get; } = new List<MailFolder>();
 
@@ -44,13 +46,15 @@ namespace MizuMail
         {
             baseDir = Path.Combine(Application.StartupPath, "mbox");
 
-            Inbox = new MailFolder("inbox", Path.Combine(baseDir, "inbox"), FolderType.Inbox);
-            Send = new MailFolder("send", Path.Combine(baseDir, "send"), FolderType.Send);
-            Trash = new MailFolder("trash", Path.Combine(baseDir, "trash"), FolderType.Trash);
+            Inbox = new MailFolder("受信トレイ", Path.Combine(baseDir, "inbox"), FolderType.Inbox);
+            Send = new MailFolder("送信トレイ", Path.Combine(baseDir, "send"), FolderType.Send);
+            Trash = new MailFolder("ごみ箱", Path.Combine(baseDir, "trash"), FolderType.Trash);
+            Draft = new MailFolder("下書き", Path.Combine(baseDir, "draft"), FolderType.Draft);
 
             Directory.CreateDirectory(Inbox.FullPath);
             Directory.CreateDirectory(Send.FullPath);
             Directory.CreateDirectory(Trash.FullPath);
+            Directory.CreateDirectory(Draft.FullPath);
 
             LoadInboxSubFolders();
         }
@@ -115,6 +119,48 @@ namespace MizuMail
 
             // ★ 最後の fallback（inbox 扱い）
             return Path.Combine(Inbox.FullPath, mail.mailName);
+        }
+
+        public MailFolder FindByPath(string fullPath)
+        {
+            if (string.IsNullOrEmpty(fullPath))
+                return null;
+
+            // 1. ルートフォルダ
+            if (string.Equals(Inbox.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return Inbox;
+
+            if (string.Equals(Send.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return Send;
+
+            if (string.Equals(Trash.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return Trash;
+
+            // 2. Inbox のサブフォルダ
+            foreach (var sub in InboxSubFolders)
+            {
+                if (string.Equals(sub.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                    return sub;
+            }
+
+            return null;
+        }
+
+        public MailFolder GetFolderByType(string type)
+        {
+            switch (type)
+            {
+                case "Inbox":
+                    return Inbox;
+                case "Send":
+                    return Send;
+                case "Draft":
+                    return Draft;
+                case "Trash":
+                    return Trash;
+                default:
+                    return Inbox;
+            }
         }
     }
 }
