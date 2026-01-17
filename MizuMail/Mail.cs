@@ -1,4 +1,5 @@
 ﻿using MailKit;
+using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,8 @@ namespace MizuMail
         public static string userName;          // ユーザ名
         public static string smtpServerName;    // 送信サーバの名前
         public static string popServerName;     // 受信サーバの名前
+        public static string imapServerName;    // IMAPサーバの名前
+        public static int imapPortNo;           // IMAPサーバのポート番号
         public static int smtpPortNo;           // 送信サーバのポート番号
         public static int popPortNo;            // 受信サーバのポート番号
         public static string password;          // 受信サーバのパスワード
@@ -41,8 +44,6 @@ namespace MizuMail
         public bool isDraft;                    // 下書き or 未送信
         public string id { get; set; } = Guid.NewGuid().ToString(); // メールの一意識別子
         public MailFolder Folder { get; set; }  // メールフォルダ情報
-        public string folder = "inbox";         // メールフォルダ名
-        public string lastFolder = "";          // 直前のメールフォルダ名
         public MailFolder LastFolder; // 直前のフォルダ
         public string LastMailName;   // 直前のファイル名
 
@@ -65,6 +66,21 @@ namespace MizuMail
             this.mailName = mailName;
             this.uidl = uidl;
             this.notReadYet = notReadYet;
+        }
+
+        public static Mail FromMimeMessage(MimeMessage msg)
+        {
+            string from = msg.From?.ToString() ?? "";
+            string cc = msg.Cc?.ToString() ?? "";
+            string bcc = msg.Bcc?.ToString() ?? "";
+            string subject = msg.Subject ?? "";
+            string body = msg.TextBody ?? msg.HtmlBody ?? "";
+            string date = msg.Date.ToString("yyyy/MM/dd HH:mm:ss");
+
+            // mailName は後で上書きするので仮でOK
+            string mailName = Guid.NewGuid().ToString() + ".eml";
+
+            return new Mail(from, cc, bcc, subject, body, null, date, mailName, "", true);
         }
     }
 }

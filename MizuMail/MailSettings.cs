@@ -14,6 +14,8 @@ namespace MizuMail
         public string m_userName = string.Empty;                        // ユーザ名
         public string m_passWord = string.Empty;                        // POP3のパスワード
         public string m_popServer = string.Empty;                       // POP3サーバ名
+        public string m_imapServer = string.Empty;                      // IMAP4サーバ名
+        public int m_imapPortNo = 143;                                  // IMAP4のポート番号
         public string m_smtpServer = string.Empty;                      // SMTPサーバ名
         public int m_popPortNo = 110;                                   // POP3のポート番号
         public int m_smtpPortNo = 25;                                   // SMTPのポート番号

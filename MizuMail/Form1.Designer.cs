@@ -31,15 +31,15 @@ namespace MizuMail
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
-            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
-            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("下書き");
-            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("ごみ箱(0)", 3, 3);
-            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
-            treeNode1,
-            treeNode2,
-            treeNode3,
-            treeNode4});
+            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
+            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
+            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("ごみ箱(0)", 3, 3);
+            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            treeNode6,
+            treeNode7,
+            treeNode8,
+            treeNode9});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -528,25 +528,25 @@ namespace MizuMail
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
-            treeNode1.ImageIndex = 1;
-            treeNode1.Name = "nodeReceive";
-            treeNode1.SelectedImageIndex = 1;
-            treeNode1.Text = "受信メール(0)";
-            treeNode2.ImageIndex = 2;
-            treeNode2.Name = "nodeSend";
-            treeNode2.SelectedImageIndex = 2;
-            treeNode2.Text = "送信メール(0)";
-            treeNode3.Name = "nodeDraft";
-            treeNode3.Text = "下書き";
-            treeNode4.ImageIndex = 3;
-            treeNode4.Name = "nodeDelete";
-            treeNode4.SelectedImageIndex = 3;
-            treeNode4.Text = "ごみ箱(0)";
-            treeNode5.ImageIndex = 0;
-            treeNode5.Name = "rootMail";
-            treeNode5.Text = "メール";
+            treeNode6.ImageIndex = 1;
+            treeNode6.Name = "nodeReceive";
+            treeNode6.SelectedImageIndex = 1;
+            treeNode6.Text = "受信メール(0)";
+            treeNode7.ImageIndex = 2;
+            treeNode7.Name = "nodeSend";
+            treeNode7.SelectedImageIndex = 2;
+            treeNode7.Text = "送信メール(0)";
+            treeNode8.Name = "nodeDraft";
+            treeNode8.Text = "下書き";
+            treeNode9.ImageIndex = 3;
+            treeNode9.Name = "nodeDelete";
+            treeNode9.SelectedImageIndex = 3;
+            treeNode9.Text = "ごみ箱(0)";
+            treeNode10.ImageIndex = 0;
+            treeNode10.Name = "rootMail";
+            treeNode10.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode5});
+            treeNode10});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
@@ -654,7 +654,6 @@ namespace MizuMail
             this.listMain.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.listMain_ColumnClick);
             this.listMain.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.listMain_ItemDrag);
             this.listMain.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.listMain_ItemSelectionChanged);
-            this.listMain.SelectedIndexChanged += new System.EventHandler(this.listMain_SelectedIndexChanged);
             this.listMain.DoubleClick += new System.EventHandler(this.listMain_DoubleClick);
             // 
             // columnFromOrTo

@@ -100,27 +100,6 @@ namespace MizuMail
             return InboxSubFolders.FirstOrDefault(f => f.Name == name);
         }
 
-        public string ResolveMailPath(Mail mail)
-        {
-            if (mail == null)
-                return null;
-
-            // ★ 新方式（MailFolder）優先
-            if (mail.Folder != null)
-                return Path.Combine(mail.Folder.FullPath, mail.mailName);
-
-            // ★ 旧方式（string folder）も互換性のため残す
-            if (!string.IsNullOrEmpty(mail.folder))
-            {
-                var folder = FindFolderByName(mail.folder);
-                if (folder != null)
-                    return Path.Combine(folder.FullPath, mail.mailName);
-            }
-
-            // ★ 最後の fallback（inbox 扱い）
-            return Path.Combine(Inbox.FullPath, mail.mailName);
-        }
-
         public MailFolder FindByPath(string fullPath)
         {
             if (string.IsNullOrEmpty(fullPath))

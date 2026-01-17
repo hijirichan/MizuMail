@@ -25,8 +25,6 @@ namespace MizuMail
             Mail.userName = textUserName.Text;
             Mail.smtpServerName = textSmtpServerName.Text;
             Mail.smtpPortNo = int.Parse(textSmtpPortNo.Text);
-            Mail.popServerName = textPopServerName.Text;
-            Mail.popPortNo = int.Parse(textPopServerPortNo.Text);
             Mail.password = textPassword.Text;
             Mail.deleteMail = checkDeleteMail.Checked;
             Mail.alertSound = checkAlertSound.Checked;
@@ -36,10 +34,14 @@ namespace MizuMail
             if (radioPop3.Checked)
             {
                 Mail.receiveMethod_Pop3 = true;
+                Mail.popServerName = textPopServerName.Text;
+                Mail.popPortNo = int.Parse(textPopServerPortNo.Text);
             }
             else
             {
                 Mail.receiveMethod_Pop3 = false;
+                Mail.imapServerName = textPopServerName.Text;
+                Mail.imapPortNo = int.Parse(textPopServerPortNo.Text);
             }
             Mail.useSsl = checkUseSsl.Checked;
 
@@ -59,8 +61,16 @@ namespace MizuMail
             textUserName.Text = Mail.userName;
             textSmtpServerName.Text = Mail.smtpServerName;
             textSmtpPortNo.Text = Mail.smtpPortNo.ToString();
-            textPopServerName.Text = Mail.popServerName;
-            textPopServerPortNo.Text = Mail.popPortNo.ToString();
+            if (Mail.receiveMethod_Pop3)
+            {
+                textPopServerPortNo.Text = Mail.popPortNo.ToString();
+                textPopServerName.Text = Mail.popServerName;
+            }
+            else
+            {
+                textPopServerPortNo.Text = Mail.imapPortNo.ToString();
+                textPopServerName.Text = Mail.imapServerName;
+            }
             textPassword.Text = Mail.password;
             checkDeleteMail.Checked = Mail.deleteMail;
             checkAlertSound.Checked = Mail.alertSound;
