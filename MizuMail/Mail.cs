@@ -36,6 +36,8 @@ namespace MizuMail
         public string bccaddress;               // BCCアドレス
         public string subject;                  // 件名
         public string body;                     // 本文
+        public MimeMessage message;             // MimeMessageオブジェクト
+        public bool hasAtach;                   // 添付ファイルがあるかどうか
         public string atach;                    // 添付ファイル名
         public string date;                     // 受信日時またはメール送信日時
         public string mailName;                 // メールファイル名
@@ -44,8 +46,9 @@ namespace MizuMail
         public bool isDraft;                    // 下書き or 未送信
         public string id { get; set; } = Guid.NewGuid().ToString(); // メールの一意識別子
         public MailFolder Folder { get; set; }  // メールフォルダ情報
-        public MailFolder LastFolder; // 直前のフォルダ
-        public string LastMailName;   // 直前のファイル名
+        public MailFolder LastFolder;           // 直前のフォルダ
+        public string LastMailName;             // 直前のファイル名
+        public string mailPath;                 // メールのフルパス
 
         // コンストラクタ
         public Mail()

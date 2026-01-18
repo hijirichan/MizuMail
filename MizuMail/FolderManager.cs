@@ -18,8 +18,10 @@ namespace MizuMail
     public class MailFolder
     {
         public string Name { get; }
+        public string DisplayName { get; set; }
         public string FullPath { get; }
         public FolderType Type { get; }
+        public List<MailFolder> SubFolders { get; set; } = new List<MailFolder>();
 
         public MailFolder(string name, string fullPath, FolderType type)
         {
@@ -46,10 +48,22 @@ namespace MizuMail
         {
             baseDir = Path.Combine(Application.StartupPath, "mbox");
 
-            Inbox = new MailFolder("受信トレイ", Path.Combine(baseDir, "inbox"), FolderType.Inbox);
-            Send = new MailFolder("送信トレイ", Path.Combine(baseDir, "send"), FolderType.Send);
-            Trash = new MailFolder("ごみ箱", Path.Combine(baseDir, "trash"), FolderType.Trash);
-            Draft = new MailFolder("下書き", Path.Combine(baseDir, "draft"), FolderType.Draft);
+            Inbox = new MailFolder("Inbox", Path.Combine(baseDir, "inbox"), FolderType.Inbox)
+            {
+                DisplayName = "受信メール"
+            };
+            Send = new MailFolder("Send", Path.Combine(baseDir, "send"), FolderType.Send)
+            {
+                DisplayName = "送信メール"
+            };
+            Draft = new MailFolder("Draft", Path.Combine(baseDir, "draft"), FolderType.Draft)
+            {
+                DisplayName = "下書き"
+            };
+            Trash = new MailFolder("Trash", Path.Combine(baseDir, "trash"), FolderType.Trash)
+            {
+                DisplayName = "ごみ箱"
+            };
 
             Directory.CreateDirectory(Inbox.FullPath);
             Directory.CreateDirectory(Send.FullPath);
@@ -141,5 +155,104 @@ namespace MizuMail
                     return Inbox;
             }
         }
+
+        public MailFolder FindFolder(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            // ルート4フォルダから検索開始
+            return FindFolderRecursive(Inbox, name)
+                ?? FindFolderRecursive(Send, name)
+                ?? FindFolderRecursive(Draft, name)
+                ?? FindFolderRecursive(Trash, name);
+        }
+
+        private MailFolder FindFolderRecursive(MailFolder folder, string name)
+        {
+            if (folder == null)
+                return null;
+
+            // 名前一致（大文字小文字無視）
+            if (string.Equals(folder.Name, name, StringComparison.OrdinalIgnoreCase))
+                return folder;
+
+            // サブフォルダを再帰的に検索
+            foreach (var sub in folder.SubFolders)
+            {
+                var found = FindFolderRecursive(sub, name);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        public MailFolder CreateSubFolder(MailFolder parent, string name)
+        {
+            string newPath = Path.Combine(parent.FullPath, name);
+
+            if (!Directory.Exists(newPath))
+                Directory.CreateDirectory(newPath);
+
+            var folder = new MailFolder(name, newPath, FolderType.InboxSub);
+
+            parent.SubFolders.Add(folder);
+
+            return folder;
+        }
+
+        public MailFolder GetOrCreateFolderByPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            var parts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+            MailFolder current = null;
+            string root = parts[0].ToLower();
+
+            switch (root)
+            {
+                case "inbox":
+                    current = Inbox;
+                    break;
+                case "send":
+                    current = Send;
+                    break;
+                case "draft":
+                    current = Draft;
+                    break;
+                case "trash":
+                    current = Trash;
+                    break;
+                default:
+                    return null;
+            }
+
+            for (int i = 1; i < parts.Length; i++)
+            {
+                string name = parts[i];
+
+                var next = current.SubFolders
+                    .FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+                if (next == null)
+                {
+                    string newPath = Path.Combine(current.FullPath, name);
+                    Directory.CreateDirectory(newPath);
+
+                    next = new MailFolder(name, newPath, FolderType.InboxSub);
+                    current.SubFolders.Add(next);
+
+                    // ★ UI 更新は FormMain 側で行う
+                }
+
+                current = next;
+            }
+
+            return current;
+        }
+
     }
 }

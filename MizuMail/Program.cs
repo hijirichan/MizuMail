@@ -16,6 +16,7 @@ namespace MizuMail
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            FormMain.SetBrowserFeatureControl();
             Application.Run(new FormMain());
         }
     }

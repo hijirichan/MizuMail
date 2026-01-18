@@ -31,15 +31,15 @@ namespace MizuMail
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
-            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("下書き");
-            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("ごみ箱(0)", 3, 3);
-            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
-            treeNode6,
-            treeNode7,
-            treeNode8,
-            treeNode9});
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
+            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            treeNode1,
+            treeNode2,
+            treeNode3,
+            treeNode4});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -57,6 +57,7 @@ namespace MizuMail
             this.menuMailDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.設定SToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAccountSetting = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuReleEdit = new System.Windows.Forms.ToolStripMenuItem();
             this.ヘルプHToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuHelpView = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem8 = new System.Windows.Forms.ToolStripSeparator();
@@ -106,10 +107,10 @@ namespace MizuMail
             this.menuRead = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.menuSpeechMail = new System.Windows.Forms.ToolStripMenuItem();
-            this.browserMail = new System.Windows.Forms.WebBrowser();
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
+            this.browserMail = new Microsoft.Web.WebView2.WinForms.WebView2();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -123,6 +124,7 @@ namespace MizuMail
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
             this.contextMenuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.browserMail)).BeginInit();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -257,7 +259,8 @@ namespace MizuMail
             // 設定SToolStripMenuItem
             // 
             this.設定SToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuAccountSetting});
+            this.menuAccountSetting,
+            this.menuReleEdit});
             this.設定SToolStripMenuItem.Name = "設定SToolStripMenuItem";
             this.設定SToolStripMenuItem.Size = new System.Drawing.Size(71, 24);
             this.設定SToolStripMenuItem.Text = "設定(&S)";
@@ -265,10 +268,17 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
+            // 
+            // menuReleEdit
+            // 
+            this.menuReleEdit.Name = "menuReleEdit";
+            this.menuReleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuReleEdit.Text = "振り分け設定(&R)";
+            this.menuReleEdit.Click += new System.EventHandler(this.menuReleEdit_Click);
             // 
             // ヘルプHToolStripMenuItem
             // 
@@ -528,25 +538,25 @@ namespace MizuMail
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
-            treeNode6.ImageIndex = 1;
-            treeNode6.Name = "nodeReceive";
-            treeNode6.SelectedImageIndex = 1;
-            treeNode6.Text = "受信メール(0)";
-            treeNode7.ImageIndex = 2;
-            treeNode7.Name = "nodeSend";
-            treeNode7.SelectedImageIndex = 2;
-            treeNode7.Text = "送信メール(0)";
-            treeNode8.Name = "nodeDraft";
-            treeNode8.Text = "下書き";
-            treeNode9.ImageIndex = 3;
-            treeNode9.Name = "nodeDelete";
-            treeNode9.SelectedImageIndex = 3;
-            treeNode9.Text = "ごみ箱(0)";
-            treeNode10.ImageIndex = 0;
-            treeNode10.Name = "rootMail";
-            treeNode10.Text = "メール";
+            treeNode1.ImageIndex = 1;
+            treeNode1.Name = "nodeReceive";
+            treeNode1.SelectedImageIndex = 1;
+            treeNode1.Text = "受信メール(0)";
+            treeNode2.ImageIndex = 2;
+            treeNode2.Name = "nodeSend";
+            treeNode2.SelectedImageIndex = 2;
+            treeNode2.Text = "送信メール(0)";
+            treeNode3.ImageIndex = 3;
+            treeNode3.Name = "nodeDraft";
+            treeNode3.Text = "下書き";
+            treeNode4.ImageIndex = 4;
+            treeNode4.Name = "nodeDelete";
+            treeNode4.Text = "ごみ箱(0)";
+            treeNode5.ImageIndex = 0;
+            treeNode5.Name = "rootMail";
+            treeNode5.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode10});
+            treeNode5});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
@@ -605,10 +615,11 @@ namespace MizuMail
             // 
             this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
             this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "box_normal_r.gif");
-            this.imageList1.Images.SetKeyName(1, "box_receive_r.gif");
-            this.imageList1.Images.SetKeyName(2, "box_send_r.gif");
-            this.imageList1.Images.SetKeyName(3, "trash_r.gif");
+            this.imageList1.Images.SetKeyName(0, "foler");
+            this.imageList1.Images.SetKeyName(1, "inbox");
+            this.imageList1.Images.SetKeyName(2, "send");
+            this.imageList1.Images.SetKeyName(3, "draft");
+            this.imageList1.Images.SetKeyName(4, "trash");
             // 
             // splitContainer2
             // 
@@ -739,17 +750,6 @@ namespace MizuMail
             this.menuSpeechMail.Text = "読み上げ(&R)";
             this.menuSpeechMail.Click += new System.EventHandler(this.menuSpeechMail_Click);
             // 
-            // browserMail
-            // 
-            this.browserMail.AllowWebBrowserDrop = false;
-            this.browserMail.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.browserMail.Location = new System.Drawing.Point(0, 0);
-            this.browserMail.MinimumSize = new System.Drawing.Size(20, 20);
-            this.browserMail.Name = "browserMail";
-            this.browserMail.Size = new System.Drawing.Size(899, 341);
-            this.browserMail.TabIndex = 2;
-            this.browserMail.Visible = false;
-            // 
             // richTextBody
             // 
             this.richTextBody.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -771,6 +771,18 @@ namespace MizuMail
             // timerAutoReceive
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
+            // 
+            // browserMail
+            // 
+            this.browserMail.AllowExternalDrop = true;
+            this.browserMail.CreationProperties = null;
+            this.browserMail.DefaultBackgroundColor = System.Drawing.Color.White;
+            this.browserMail.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.browserMail.Location = new System.Drawing.Point(0, 0);
+            this.browserMail.Name = "browserMail";
+            this.browserMail.Size = new System.Drawing.Size(899, 341);
+            this.browserMail.TabIndex = 3;
+            this.browserMail.ZoomFactor = 1D;
             // 
             // FormMain
             // 
@@ -804,6 +816,7 @@ namespace MizuMail
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
             this.contextMenuStrip1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.browserMail)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -822,7 +835,7 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripButton toolHelpButton;
         private System.Windows.Forms.ToolStripStatusLabel labelMessage;
         private System.Windows.Forms.SplitContainer splitContainer1;
-        private System.Windows.Forms.TreeView treeMain;
+        public System.Windows.Forms.TreeView treeMain;
         private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.ListView listMain;
         private System.Windows.Forms.ColumnHeader columnFromOrTo;
@@ -839,7 +852,6 @@ namespace MizuMail
         private System.Windows.Forms.ColumnHeader columnMailName;
         private System.Windows.Forms.RichTextBox richTextBody;
         private System.Windows.Forms.ToolStripDropDownButton buttonAtachMenu;
-        private System.Windows.Forms.WebBrowser browserMail;
         private System.Windows.Forms.ColumnHeader columnSize;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripButton toolReplyButton;
@@ -881,6 +893,8 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuRenameFolder;
         private System.Windows.Forms.ToolStripMenuItem menuRead;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
+        private System.Windows.Forms.ToolStripMenuItem menuReleEdit;
+        private Microsoft.Web.WebView2.WinForms.WebView2 browserMail;
     }
 }
 

@@ -64,6 +64,15 @@
     <Reference Include="MailKit, Version=4.14.0.0, Culture=neutral, PublicKeyToken=4e064fe7c44a8f1b, processorArchitecture=MSIL">
       <HintPath>..\packages\MailKit.4.14.1\lib\net47\MailKit.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Core, Version=1.0.3650.58, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.3650.58\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.WebView2.WinForms, Version=1.0.3650.58, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.3650.58\lib\net462\Microsoft.Web.WebView2.WinForms.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Wpf, Version=1.0.3650.58, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.3650.58\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath>
+    </Reference>
     <Reference Include="MimeKit, Version=4.14.0.0, Culture=neutral, PublicKeyToken=bede1c8a46c66814, processorArchitecture=MSIL">
       <HintPath>..\packages\MimeKit.4.14.0\lib\net47\MimeKit.dll</HintPath>
     </Reference>
@@ -115,6 +124,25 @@
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
     <Compile Include="FolderManager.cs" />
+    <Compile Include="FormFolderSelectDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormFolderSelectDialog.Designer.cs">
+      <DependentUpon>FormFolderSelectDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormRuleEditDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormRuleEditDialog.Designer.cs">
+      <DependentUpon>FormRuleEditDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormRuleEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormRuleEditor.Designer.cs">
+      <DependentUpon>FormRuleEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MailRule.cs" />
     <Compile Include="Prompt.cs" />
     <Compile Include="FindDialog.cs">
       <SubType>Form</SubType>
@@ -161,11 +189,20 @@
       <DependentUpon>Form1.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="FormFolderSelectDialog.resx">
+      <DependentUpon>FormFolderSelectDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FormMailAccount.resx">
       <DependentUpon>FormMailAccount.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="FormMailCreate.resx">
       <DependentUpon>FormMailCreate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormRuleEditDialog.resx">
+      <DependentUpon>FormRuleEditDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormRuleEditor.resx">
+      <DependentUpon>FormRuleEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -207,5 +244,7 @@
       <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.ValueTuple.4.6.1\build\net471\System.ValueTuple.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Web.WebView2.1.0.3650.58\build\Microsoft.Web.WebView2.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Web.WebView2.1.0.3650.58\build\Microsoft.Web.WebView2.targets'))" />
   </Target>
+  <Import Project="..\packages\Microsoft.Web.WebView2.1.0.3650.58\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.3650.58\build\Microsoft.Web.WebView2.targets')" />
 </Project>
