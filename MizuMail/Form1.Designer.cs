@@ -107,10 +107,12 @@ namespace MizuMail
             this.menuRead = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.menuSpeechMail = new System.Windows.Forms.ToolStripMenuItem();
+            this.browserMail = new Microsoft.Web.WebView2.WinForms.WebView2();
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
-            this.browserMail = new Microsoft.Web.WebView2.WinForms.WebView2();
+            this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuLocalFiltter = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -134,6 +136,7 @@ namespace MizuMail
             this.ファイルFToolStripMenuItem,
             this.menuMail,
             this.設定SToolStripMenuItem,
+            this.ツールTToolStripMenuItem,
             this.ヘルプHToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -750,6 +753,18 @@ namespace MizuMail
             this.menuSpeechMail.Text = "読み上げ(&R)";
             this.menuSpeechMail.Click += new System.EventHandler(this.menuSpeechMail_Click);
             // 
+            // browserMail
+            // 
+            this.browserMail.AllowExternalDrop = true;
+            this.browserMail.CreationProperties = null;
+            this.browserMail.DefaultBackgroundColor = System.Drawing.Color.White;
+            this.browserMail.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.browserMail.Location = new System.Drawing.Point(0, 0);
+            this.browserMail.Name = "browserMail";
+            this.browserMail.Size = new System.Drawing.Size(899, 341);
+            this.browserMail.TabIndex = 3;
+            this.browserMail.ZoomFactor = 1D;
+            // 
             // richTextBody
             // 
             this.richTextBody.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -772,17 +787,20 @@ namespace MizuMail
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
             // 
-            // browserMail
+            // ツールTToolStripMenuItem
             // 
-            this.browserMail.AllowExternalDrop = true;
-            this.browserMail.CreationProperties = null;
-            this.browserMail.DefaultBackgroundColor = System.Drawing.Color.White;
-            this.browserMail.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.browserMail.Location = new System.Drawing.Point(0, 0);
-            this.browserMail.Name = "browserMail";
-            this.browserMail.Size = new System.Drawing.Size(899, 341);
-            this.browserMail.TabIndex = 3;
-            this.browserMail.ZoomFactor = 1D;
+            this.ツールTToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuLocalFiltter});
+            this.ツールTToolStripMenuItem.Name = "ツールTToolStripMenuItem";
+            this.ツールTToolStripMenuItem.Size = new System.Drawing.Size(74, 24);
+            this.ツールTToolStripMenuItem.Text = "ツール(&T)";
+            // 
+            // menuLocalFiltter
+            // 
+            this.menuLocalFiltter.Name = "menuLocalFiltter";
+            this.menuLocalFiltter.Size = new System.Drawing.Size(224, 26);
+            this.menuLocalFiltter.Text = "ローカル振り分け(&L)";
+            this.menuLocalFiltter.Click += new System.EventHandler(this.menuLocalFiltter_Click);
             // 
             // FormMain
             // 
@@ -895,6 +913,8 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem menuReleEdit;
         private Microsoft.Web.WebView2.WinForms.WebView2 browserMail;
+        private System.Windows.Forms.ToolStripMenuItem ツールTToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem menuLocalFiltter;
     }
 }
 

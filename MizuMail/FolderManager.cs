@@ -17,9 +17,9 @@ namespace MizuMail
 
     public class MailFolder
     {
-        public string Name { get; }
+        public string Name { get; set; }
         public string DisplayName { get; set; }
-        public string FullPath { get; }
+        public string FullPath { get; private set; }
         public FolderType Type { get; }
         public List<MailFolder> SubFolders { get; set; } = new List<MailFolder>();
 

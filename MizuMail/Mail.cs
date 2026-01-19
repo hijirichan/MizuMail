@@ -39,6 +39,7 @@ namespace MizuMail
         public MimeMessage message;             // MimeMessageオブジェクト
         public bool hasAtach;                   // 添付ファイルがあるかどうか
         public string atach;                    // 添付ファイル名
+        public List<string> attachList { get; set; } = new List<string>();  // 添付ファイル名リスト
         public string date;                     // 受信日時またはメール送信日時
         public string mailName;                 // メールファイル名
         public string uidl;                     // UIDL
