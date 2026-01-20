@@ -46,6 +46,7 @@
             this.buttonOK = new System.Windows.Forms.Button();
             this.buttonCancel = new System.Windows.Forms.Button();
             this.buttonSelectFolder = new System.Windows.Forms.Button();
+            this.checkUseRegex = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // label1
@@ -98,7 +99,7 @@
             // 
             // buttonOK
             // 
-            this.buttonOK.Location = new System.Drawing.Point(325, 120);
+            this.buttonOK.Location = new System.Drawing.Point(325, 145);
             this.buttonOK.Name = "buttonOK";
             this.buttonOK.Size = new System.Drawing.Size(86, 30);
             this.buttonOK.TabIndex = 1;
@@ -109,7 +110,7 @@
             // buttonCancel
             // 
             this.buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.buttonCancel.Location = new System.Drawing.Point(417, 120);
+            this.buttonCancel.Location = new System.Drawing.Point(417, 145);
             this.buttonCancel.Name = "buttonCancel";
             this.buttonCancel.Size = new System.Drawing.Size(86, 30);
             this.buttonCancel.TabIndex = 0;
@@ -125,11 +126,22 @@
             this.buttonSelectFolder.Text = "選択...";
             this.buttonSelectFolder.Click += new System.EventHandler(this.buttonSelectFolder_Click);
             // 
+            // checkUseRegex
+            // 
+            this.checkUseRegex.AutoSize = true;
+            this.checkUseRegex.Location = new System.Drawing.Point(137, 120);
+            this.checkUseRegex.Name = "checkUseRegex";
+            this.checkUseRegex.Size = new System.Drawing.Size(154, 19);
+            this.checkUseRegex.TabIndex = 8;
+            this.checkUseRegex.Text = "正規表現を使用する";
+            this.checkUseRegex.UseVisualStyleBackColor = true;
+            // 
             // FormRuleEditDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(519, 162);
+            this.ClientSize = new System.Drawing.Size(519, 184);
+            this.Controls.Add(this.checkUseRegex);
             this.Controls.Add(this.buttonSelectFolder);
             this.Controls.Add(this.buttonCancel);
             this.Controls.Add(this.buttonOK);
@@ -151,5 +163,7 @@
         }
 
         #endregion
+
+        private System.Windows.Forms.CheckBox checkUseRegex;
     }
 }

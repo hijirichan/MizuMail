@@ -1226,7 +1226,10 @@ namespace MizuMail
             using (var stream = File.Create(tempPath))
                 part.Content.DecodeTo(stream);
 
-            Process.Start(tempPath);
+            if(MessageBox.Show($"選択したファイル{tempPath}を開きますか？\nファイルによってはウィルスの可能性もありますので注意してください。", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                Process.Start(tempPath);
+            }
         }
 
         // 受信日時をローカル時刻に変換して表示する（日本語曜日対応）
@@ -2504,21 +2507,27 @@ namespace MizuMail
 
         private void listMain_ItemDrag(object sender, ItemDragEventArgs e)
         {
-            if (e.Item is ListViewItem item && item.Tag is Mail mail)
-            {
-                DoDragDrop(mail, DragDropEffects.Move);
-            }
+            // 選択されているメールを全部集める
+            var mails = listMain.SelectedItems
+                .Cast<ListViewItem>()
+                .Select(item => (Mail)item.Tag)
+                .ToList();
+
+            // 複数メールをまとめてドラッグデータにする
+            DoDragDrop(mails, DragDropEffects.Move);
         }
 
         private void treeMain_DragDrop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(typeof(Mail)))
+            // ★ 複数メール対応：List<Mail> を受け取る
+            if (!e.Data.GetDataPresent(typeof(List<Mail>)))
                 return;
 
-            Mail mail = e.Data.GetData(typeof(Mail)) as Mail;
-            if (mail == null)
+            var mails = e.Data.GetData(typeof(List<Mail>)) as List<Mail>;
+            if (mails == null || mails.Count == 0)
                 return;
 
+            // ★ ドロップ先フォルダを取得
             Point pt = treeMain.PointToClient(new Point(e.X, e.Y));
             TreeNode node = treeMain.GetNodeAt(pt);
             if (node == null)
@@ -2528,26 +2537,27 @@ namespace MizuMail
             if (targetFolder == null)
                 return;
 
-            // ★ メール移動だけ行う（UI更新は絶対にしない）
-            if (targetFolder.Type == FolderType.Trash)
+            // ★ 複数メールをまとめて移動
+            foreach (var mail in mails)
             {
-                MoveMailWithUndo(mail, folderManager.Trash);
-            }
-            else if (mail.Folder != targetFolder)
-            {
-                MoveMailWithUndo(mail, targetFolder);
+                if (targetFolder.Type == FolderType.Trash)
+                {
+                    MoveMailWithUndo(mail, folderManager.Trash);
+                }
+                else if (mail.Folder != targetFolder)
+                {
+                    MoveMailWithUndo(mail, targetFolder);
+                }
             }
 
-            // ★ UI更新は DragDrop 完了後に行う（ここが重要）
+            // ★ UI更新は DragDrop 完了後に行う（元のコードをそのまま）
             this.BeginInvoke(new Action(delegate
             {
-                // TreeView がまだ構築されていない可能性がある
                 if (treeMain.Nodes.Count == 0)
                     return;
 
                 BuildTree();
 
-                // ★ SelectedNode が null なら Inbox を選択
                 if (treeMain.SelectedNode == null)
                 {
                     if (treeMain.Nodes.Count > 0 && treeMain.Nodes[0].Nodes.Count > 0)
@@ -2556,7 +2566,6 @@ namespace MizuMail
                         return;
                 }
 
-                // ★ Tag が MailFolder でない場合も防御
                 MailFolder folder = treeMain.SelectedNode.Tag as MailFolder;
                 if (folder == null)
                     return;
@@ -2842,7 +2851,8 @@ namespace MizuMail
 
         private void treeMain_DragOver(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(typeof(Mail)))
+            // ★ 複数メール対応：List<Mail> を受け入れる
+            if (!e.Data.GetDataPresent(typeof(List<Mail>)))
             {
                 e.Effect = DragDropEffects.None;
                 return;
@@ -3246,7 +3256,7 @@ namespace MizuMail
 
         private void treeMain_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(Mail)))
+            if (e.Data.GetDataPresent(typeof(List<Mail>)))
                 e.Effect = DragDropEffects.Move;
             else
                 e.Effect = DragDropEffects.None;
@@ -3795,18 +3805,34 @@ namespace MizuMail
             {
                 bool match = false;
 
-                // 件名に含む
+                // 件名
                 if (!string.IsNullOrWhiteSpace(rule.Contains))
                 {
-                    if (subject.IndexOf(rule.Contains, StringComparison.OrdinalIgnoreCase) >= 0)
-                        match = true;
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(subject, rule.Contains, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (subject.IndexOf(rule.Contains, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
                 }
 
-                // 差出人に含む（メールアドレスで比較）
+                // 差出人
                 if (!string.IsNullOrWhiteSpace(rule.From))
                 {
-                    if (fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
-                        match = true;
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
                 }
 
                 if (!match)
@@ -4143,14 +4169,13 @@ namespace MizuMail
                 ?? "attachment.bin";
         }
 
-        [DllImport("Shell32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SHGetFileInfo(
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        static extern IntPtr SHGetFileInfo(
             string pszPath,
             uint dwFileAttributes,
             out SHFILEINFO psfi,
             uint cbFileInfo,
-            uint uFlags
-        );
+            uint uFlags);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         public struct SHFILEINFO
@@ -4164,16 +4189,22 @@ namespace MizuMail
             public string szTypeName;
         }
 
-        private Icon GetIconFromExtension(string ext)
+        public static Icon GetIconFromExtension(string ext)
         {
             SHFILEINFO shinfo = new SHFILEINFO();
-            SHGetFileInfo(ext,
-                0,
+
+            IntPtr hImg = SHGetFileInfo(
+                ext,
+                0x80, // FILE_ATTRIBUTE_NORMAL
                 out shinfo,
                 (uint)Marshal.SizeOf(shinfo),
-                0x100 | 0x1); // SHGFI_ICON | SHGFI_USEFILEATTRIBUTES
+                0x100 | 0x10 | 0x4000);
+            // SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES
 
-            return Icon.FromHandle(shinfo.hIcon);
+            if (shinfo.hIcon != IntPtr.Zero)
+                return Icon.FromHandle(shinfo.hIcon);
+
+            return SystemIcons.WinLogo; // fallback
         }
 
         private void MoveDraftToSent(Mail mail)
@@ -4214,5 +4245,75 @@ namespace MizuMail
             }
         }
 
+        private void menuAddressBook_Click(object sender, EventArgs e)
+        {
+            // アドレス帳を読み込む
+            var book = AddressBook.LoadAddressBook();
+
+            using (var dlg = new AddressBookEditorForm(book))
+            {
+                dlg.SelectMode = false; // 編集モード
+
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    // 保存
+                    AddressBook.SaveAddressBook(book);
+                }
+            }
+        }
+
+        private (string name, string email) ParseFrom(string from)
+        {
+            string name = from;
+            string email = from;
+
+            int lt = from.IndexOf('<');
+            int gt = from.IndexOf('>');
+
+            if (lt >= 0 && gt > lt)
+            {
+                name = from.Substring(0, lt).Trim();
+                email = from.Substring(lt + 1, gt - lt - 1).Trim();
+            }
+
+            return (name, email);
+        }
+
+        private void menuAddToAddressBook_Click(object sender, EventArgs e)
+        {
+            if (currentMail == null)
+                return;
+
+            // From から抽出
+            var (name, email) = ParseFrom(currentMail.from);
+
+            if (string.IsNullOrWhiteSpace(email))
+                return;
+
+            // アドレス帳読み込み
+            var book = AddressBook.LoadAddressBook();
+
+            // 既に登録済みかチェック
+            if (book.Entries.Any(a =>a.Email.Equals(email, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("このアドレスは既に登録されています。");
+                return;
+            }
+
+            // 新規追加
+            var entry = new AddressEntry()
+            {
+                DisplayName = name,
+                Email = email,
+                Note = ""
+            };
+
+            book.Entries.Add(entry);
+
+            // 保存
+            AddressBook.SaveAddressBook(book);
+
+            MessageBox.Show("アドレス帳に追加しました。");
+        }
     }
 }

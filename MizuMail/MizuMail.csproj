@@ -123,6 +123,13 @@
     <Compile Include="AboutForm.Designer.cs">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="AddressBookEditorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AddressBookEditorForm.Designer.cs">
+      <DependentUpon>AddressBookEditorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AddressEntry.cs" />
     <Compile Include="FolderManager.cs" />
     <Compile Include="FormFolderSelectDialog.cs">
       <SubType>Form</SubType>
@@ -181,6 +188,9 @@
     <Compile Include="UndoMeta.cs" />
     <EmbeddedResource Include="AboutForm.resx">
       <DependentUpon>AboutForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AddressBookEditorForm.resx">
+      <DependentUpon>AddressBookEditorForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="FindDialog.resx">
       <DependentUpon>FindDialog.cs</DependentUpon>

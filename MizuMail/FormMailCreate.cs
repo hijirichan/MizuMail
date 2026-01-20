@@ -9,6 +9,8 @@ using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
 
 namespace MizuMail
@@ -24,7 +26,7 @@ namespace MizuMail
             InitializeComponent();
 
             // Application.Idle に登録してアイドル時にツールボタン／メニューの状態を更新する
-            Application.Idle += OnApplicationIdle;
+            System.Windows.Forms.Application.Idle += OnApplicationIdle;
         }
 
         private void buttonSend_Click(object sender, EventArgs e)
@@ -260,6 +262,14 @@ namespace MizuMail
                 // 無視
             }
 
+            var addressBook = AddressBook.LoadAddressBook();
+            var auto = new AutoCompleteStringCollection();
+            auto.AddRange(addressBook.Entries.Select(a => a.Email).ToArray());
+
+            SetupAutoComplete(textMailTo, auto);
+            SetupAutoComplete(textMailCc, auto);
+            SetupAutoComplete(textMailBcc, auto);
+
             // 初回ロード時にも状態更新
             UpdateClipboardButtons();
 
@@ -288,7 +298,7 @@ namespace MizuMail
 
             try
             {
-                Application.Idle -= OnApplicationIdle;
+                System.Windows.Forms.Application.Idle -= OnApplicationIdle;
             }
             catch
             {
@@ -513,6 +523,88 @@ namespace MizuMail
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
                 e.Effect = DragDropEffects.Copy;
+        }
+
+        private void menuSelectFromAddressBook_Click(object sender, EventArgs e)
+        {
+            // どの TextBox から呼ばれたか
+            var target = contextAddress.SourceControl as System.Windows.Forms.TextBox;
+            if (target == null)
+                return;
+
+            // アドレス帳を読み込む
+            var book = AddressBook.LoadAddressBook();
+
+            // 編集ダイアログを開く（選択モード）
+            using (var dlg = new AddressBookEditorForm(book))
+            {
+                dlg.SelectMode = true;
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    // 選択されたアドレスを取得
+                    var entry = dlg.SelectedEntry;
+                    if (entry != null)
+                    {
+                        // 挿入形式：「表示名 <メールアドレス>」
+                        string insert = $"{entry.DisplayName} <{entry.Email}>";
+
+                        // TextBox に挿入
+                        if (string.IsNullOrWhiteSpace(target.Text))
+                            target.Text = insert;
+                        else
+                            target.Text += "; " + insert;
+                    }
+
+                    // 保存
+                    AddressBook.SaveAddressBook(book);
+                }
+            }
+        }
+
+        private void SetupAutoComplete(System.Windows.Forms.TextBox box, AutoCompleteStringCollection auto)
+        {
+            box.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            box.AutoCompleteSource = AutoCompleteSource.CustomSource;
+            box.AutoCompleteCustomSource = auto;
+        }
+
+        private void textMailTo_Leave(object sender, EventArgs e)
+        {
+            var book = AddressBook.LoadAddressBook();
+            foreach (var entry in book.Entries)
+            {
+                if (textMailTo.Text.Trim().Equals(entry.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    textMailTo.Text = $"{entry.DisplayName} <{entry.Email}>";
+                    break;
+                }
+            }
+        }
+
+        private void textMailCc_Leave(object sender, EventArgs e)
+        {
+            var book = AddressBook.LoadAddressBook();
+            foreach (var entry in book.Entries)
+            {
+                if (textMailCc.Text.Trim().Equals(entry.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    textMailCc.Text = $"{entry.DisplayName} <{entry.Email}>";
+                    break;
+                }
+            }
+        }
+
+        private void textMailBcc_Leave(object sender, EventArgs e)
+        {
+            var book = AddressBook.LoadAddressBook();
+            foreach (var entry in book.Entries)
+            {
+                if (textMailBcc.Text.Trim().Equals(entry.Email, StringComparison.OrdinalIgnoreCase))
+                {
+                    textMailBcc.Text = $"{entry.DisplayName} <{entry.Email}>";
+                    break;
+                }
+            }
         }
     }
 }

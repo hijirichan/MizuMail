@@ -11,5 +11,6 @@ namespace MizuMail
         public string Contains { get; set; }   // 件名に含む
         public string From { get; set; }       // 差出人に含む
         public string MoveTo { get; set; }     // 移動先フォルダ名
+        public bool UseRegex { get; set; }     // 正規表現を使用するかどうか
     }
 }

@@ -58,6 +58,8 @@ namespace MizuMail
             this.設定SToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAccountSetting = new System.Windows.Forms.ToolStripMenuItem();
             this.menuReleEdit = new System.Windows.Forms.ToolStripMenuItem();
+            this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuLocalFiltter = new System.Windows.Forms.ToolStripMenuItem();
             this.ヘルプHToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuHelpView = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem8 = new System.Windows.Forms.ToolStripSeparator();
@@ -111,8 +113,9 @@ namespace MizuMail
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
-            this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuLocalFiltter = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAddressBook = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAddToAddressBook = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -271,7 +274,7 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
@@ -279,9 +282,25 @@ namespace MizuMail
             // menuReleEdit
             // 
             this.menuReleEdit.Name = "menuReleEdit";
-            this.menuReleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuReleEdit.Size = new System.Drawing.Size(212, 26);
             this.menuReleEdit.Text = "振り分け設定(&R)";
             this.menuReleEdit.Click += new System.EventHandler(this.menuReleEdit_Click);
+            // 
+            // ツールTToolStripMenuItem
+            // 
+            this.ツールTToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuLocalFiltter,
+            this.menuAddressBook});
+            this.ツールTToolStripMenuItem.Name = "ツールTToolStripMenuItem";
+            this.ツールTToolStripMenuItem.Size = new System.Drawing.Size(74, 24);
+            this.ツールTToolStripMenuItem.Text = "ツール(&T)";
+            // 
+            // menuLocalFiltter
+            // 
+            this.menuLocalFiltter.Name = "menuLocalFiltter";
+            this.menuLocalFiltter.Size = new System.Drawing.Size(224, 26);
+            this.menuLocalFiltter.Text = "ローカル振り分け(&L)";
+            this.menuLocalFiltter.Click += new System.EventHandler(this.menuLocalFiltter_Click);
             // 
             // ヘルプHToolStripMenuItem
             // 
@@ -704,52 +723,54 @@ namespace MizuMail
             this.menuNotReadYet,
             this.menuRead,
             this.toolStripSeparator5,
-            this.menuSpeechMail});
+            this.menuSpeechMail,
+            this.toolStripMenuItem9,
+            this.menuAddToAddressBook});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(178, 136);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(249, 166);
             // 
             // menuDelete
             // 
             this.menuDelete.Name = "menuDelete";
-            this.menuDelete.Size = new System.Drawing.Size(177, 24);
+            this.menuDelete.Size = new System.Drawing.Size(248, 24);
             this.menuDelete.Text = "削除(&D)";
             this.menuDelete.Click += new System.EventHandler(this.menuDelete_Click);
             // 
             // menuUndoMail
             // 
             this.menuUndoMail.Name = "menuUndoMail";
-            this.menuUndoMail.Size = new System.Drawing.Size(177, 24);
+            this.menuUndoMail.Size = new System.Drawing.Size(248, 24);
             this.menuUndoMail.Text = "元に戻す(&U)";
             this.menuUndoMail.Click += new System.EventHandler(this.menuUndoMail_Click);
             // 
             // toolStripMenuItem6
             // 
             this.toolStripMenuItem6.Name = "toolStripMenuItem6";
-            this.toolStripMenuItem6.Size = new System.Drawing.Size(174, 6);
+            this.toolStripMenuItem6.Size = new System.Drawing.Size(245, 6);
             // 
             // menuNotReadYet
             // 
             this.menuNotReadYet.Name = "menuNotReadYet";
-            this.menuNotReadYet.Size = new System.Drawing.Size(177, 24);
+            this.menuNotReadYet.Size = new System.Drawing.Size(248, 24);
             this.menuNotReadYet.Text = "未読みにする(&N)";
             this.menuNotReadYet.Click += new System.EventHandler(this.menuNotReadYet_Click);
             // 
             // menuRead
             // 
             this.menuRead.Name = "menuRead";
-            this.menuRead.Size = new System.Drawing.Size(177, 24);
+            this.menuRead.Size = new System.Drawing.Size(248, 24);
             this.menuRead.Text = "既読にする(&Y)";
             this.menuRead.Click += new System.EventHandler(this.menuRead_Click);
             // 
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
-            this.toolStripSeparator5.Size = new System.Drawing.Size(174, 6);
+            this.toolStripSeparator5.Size = new System.Drawing.Size(245, 6);
             // 
             // menuSpeechMail
             // 
             this.menuSpeechMail.Name = "menuSpeechMail";
-            this.menuSpeechMail.Size = new System.Drawing.Size(177, 24);
+            this.menuSpeechMail.Size = new System.Drawing.Size(248, 24);
             this.menuSpeechMail.Text = "読み上げ(&R)";
             this.menuSpeechMail.Click += new System.EventHandler(this.menuSpeechMail_Click);
             // 
@@ -787,20 +808,24 @@ namespace MizuMail
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
             // 
-            // ツールTToolStripMenuItem
+            // menuAddressBook
             // 
-            this.ツールTToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuLocalFiltter});
-            this.ツールTToolStripMenuItem.Name = "ツールTToolStripMenuItem";
-            this.ツールTToolStripMenuItem.Size = new System.Drawing.Size(74, 24);
-            this.ツールTToolStripMenuItem.Text = "ツール(&T)";
+            this.menuAddressBook.Name = "menuAddressBook";
+            this.menuAddressBook.Size = new System.Drawing.Size(224, 26);
+            this.menuAddressBook.Text = "アドレス帳(&A)";
+            this.menuAddressBook.Click += new System.EventHandler(this.menuAddressBook_Click);
             // 
-            // menuLocalFiltter
+            // menuAddToAddressBook
             // 
-            this.menuLocalFiltter.Name = "menuLocalFiltter";
-            this.menuLocalFiltter.Size = new System.Drawing.Size(224, 26);
-            this.menuLocalFiltter.Text = "ローカル振り分け(&L)";
-            this.menuLocalFiltter.Click += new System.EventHandler(this.menuLocalFiltter_Click);
+            this.menuAddToAddressBook.Name = "menuAddToAddressBook";
+            this.menuAddToAddressBook.Size = new System.Drawing.Size(248, 24);
+            this.menuAddToAddressBook.Text = "この人をアドレス帳に追加(&A)";
+            this.menuAddToAddressBook.Click += new System.EventHandler(this.menuAddToAddressBook_Click);
+            // 
+            // toolStripMenuItem9
+            // 
+            this.toolStripMenuItem9.Name = "toolStripMenuItem9";
+            this.toolStripMenuItem9.Size = new System.Drawing.Size(245, 6);
             // 
             // FormMain
             // 
@@ -915,6 +940,9 @@ namespace MizuMail
         private Microsoft.Web.WebView2.WinForms.WebView2 browserMail;
         private System.Windows.Forms.ToolStripMenuItem ツールTToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem menuLocalFiltter;
+        private System.Windows.Forms.ToolStripMenuItem menuAddressBook;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem9;
+        private System.Windows.Forms.ToolStripMenuItem menuAddToAddressBook;
     }
 }
 

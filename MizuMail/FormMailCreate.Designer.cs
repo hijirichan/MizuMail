@@ -17,9 +17,12 @@
 
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMailCreate));
             this.label1 = new System.Windows.Forms.Label();
             this.textMailTo = new System.Windows.Forms.TextBox();
+            this.contextAddress = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuSelectFromAddressBook = new System.Windows.Forms.ToolStripMenuItem();
             this.textMailSubject = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.buttonSend = new System.Windows.Forms.Button();
@@ -59,6 +62,7 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.labelMessage = new System.Windows.Forms.ToolStripStatusLabel();
             this.buttonAttachList = new System.Windows.Forms.ToolStripDropDownButton();
+            this.contextAddress.SuspendLayout();
             this.toolStripContainer1.ContentPanel.SuspendLayout();
             this.toolStripContainer1.TopToolStripPanel.SuspendLayout();
             this.toolStripContainer1.SuspendLayout();
@@ -82,11 +86,28 @@
             // 
             // textMailTo
             // 
+            this.textMailTo.ContextMenuStrip = this.contextAddress;
             this.textMailTo.Location = new System.Drawing.Point(56, 11);
             this.textMailTo.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.textMailTo.Name = "textMailTo";
             this.textMailTo.Size = new System.Drawing.Size(1104, 22);
             this.textMailTo.TabIndex = 1;
+            this.textMailTo.Leave += new System.EventHandler(this.textMailTo_Leave);
+            // 
+            // contextAddress
+            // 
+            this.contextAddress.ImageScalingSize = new System.Drawing.Size(20, 20);
+            this.contextAddress.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuSelectFromAddressBook});
+            this.contextAddress.Name = "contextAddress";
+            this.contextAddress.Size = new System.Drawing.Size(212, 28);
+            // 
+            // menuSelectFromAddressBook
+            // 
+            this.menuSelectFromAddressBook.Name = "menuSelectFromAddressBook";
+            this.menuSelectFromAddressBook.Size = new System.Drawing.Size(211, 24);
+            this.menuSelectFromAddressBook.Text = "アドレス帳から選択(&A)";
+            this.menuSelectFromAddressBook.Click += new System.EventHandler(this.menuSelectFromAddressBook_Click);
             // 
             // textMailSubject
             // 
@@ -189,11 +210,13 @@
             // 
             // textMailBcc
             // 
+            this.textMailBcc.ContextMenuStrip = this.contextAddress;
             this.textMailBcc.Location = new System.Drawing.Point(55, 66);
             this.textMailBcc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.textMailBcc.Name = "textMailBcc";
             this.textMailBcc.Size = new System.Drawing.Size(1104, 22);
             this.textMailBcc.TabIndex = 5;
+            this.textMailBcc.Leave += new System.EventHandler(this.textMailBcc_Leave);
             // 
             // label3
             // 
@@ -206,11 +229,13 @@
             // 
             // textMailCc
             // 
+            this.textMailCc.ContextMenuStrip = this.contextAddress;
             this.textMailCc.Location = new System.Drawing.Point(56, 37);
             this.textMailCc.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.textMailCc.Name = "textMailCc";
             this.textMailCc.Size = new System.Drawing.Size(1104, 22);
             this.textMailCc.TabIndex = 3;
+            this.textMailCc.Leave += new System.EventHandler(this.textMailCc_Leave);
             // 
             // textMailBody
             // 
@@ -479,6 +504,7 @@
             this.Text = "FormMailCreate";
             this.Load += new System.EventHandler(this.FormMailCreate_Load);
             this.SizeChanged += new System.EventHandler(this.FormMailCreate_SizeChanged);
+            this.contextAddress.ResumeLayout(false);
             this.toolStripContainer1.ContentPanel.ResumeLayout(false);
             this.toolStripContainer1.TopToolStripPanel.ResumeLayout(false);
             this.toolStripContainer1.TopToolStripPanel.PerformLayout();
@@ -544,5 +570,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem6;
         private System.Windows.Forms.ToolStripMenuItem menuFind;
         private System.Windows.Forms.ToolStripMenuItem menuReplace;
+        private System.Windows.Forms.ContextMenuStrip contextAddress;
+        private System.Windows.Forms.ToolStripMenuItem menuSelectFromAddressBook;
     }
 }
