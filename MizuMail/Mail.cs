@@ -3,6 +3,7 @@ using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -31,6 +32,7 @@ namespace MizuMail
 
         // インスタンスフィールド(メールの情報)
         public string from;                     // 差出人
+        public MailAddress From { get; set; }   // MailboxAddressオブジェクト
         public string address;                  // 宛先のアドレス
         public string ccaddress;                // CCアドレス
         public string bccaddress;               // BCCアドレス

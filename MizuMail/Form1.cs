@@ -22,6 +22,7 @@ using System.Linq;
 using System.Media;
 using System.Net;
 using System.Net.Http;
+using System.Net.Mail;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -284,17 +285,21 @@ namespace MizuMail
             int inboxCount = Directory.GetFiles(folderManager.Inbox.FullPath, "*.eml").Length;
             treeMain.Nodes[0].Nodes[0].Text = $"受信メール({inboxCount})";
 
+            // 受信
+            int spamCount = Directory.GetFiles(folderManager.Spam.FullPath, "*.eml").Length;
+            treeMain.Nodes[0].Nodes[1].Text = $"迷惑メール({spamCount})";
+
             // 送信
             int sendCount = Directory.GetFiles(folderManager.Send.FullPath, "*.eml").Length;
-            treeMain.Nodes[0].Nodes[1].Text = $"送信メール({sendCount})";
+            treeMain.Nodes[0].Nodes[2].Text = $"送信メール({sendCount})";
 
             // 下書き
             int draftCount = Directory.GetFiles(folderManager.Draft.FullPath, "*.eml").Length;
-            treeMain.Nodes[0].Nodes[2].Text = $"下書き({draftCount})";
+            treeMain.Nodes[0].Nodes[3].Text = $"下書き({draftCount})";
 
             // ごみ箱
             int trashCount = Directory.GetFiles(folderManager.Trash.FullPath, "*.eml").Length;
-            treeMain.Nodes[0].Nodes[3].Text = $"ごみ箱({trashCount})";
+            treeMain.Nodes[0].Nodes[4].Text = $"ごみ箱({trashCount})";
         }
 
         private long GetMailFileSize(Mail mail)
@@ -343,8 +348,11 @@ namespace MizuMail
                     return;
                 }
 
+                // ★ ここでキャッシュを初期化（初回ロード）
+                LoadEmlFolder(folder);
+
                 // ★ すべてのフォルダを LoadEmlFolder に統一
-                IEnumerable<Mail> displayList = LoadEmlFolder(folder);
+                IEnumerable<Mail> displayList = mailCache.Values.Where(m => string.Equals(m.Folder.FullPath, folder.FullPath, StringComparison.OrdinalIgnoreCase));
 
                 // ★ 検索フィルタ
                 if (!string.IsNullOrEmpty(currentKeyword))
@@ -461,6 +469,7 @@ namespace MizuMail
                 {
                     case FolderType.Inbox:
                     case FolderType.InboxSub:
+                    case FolderType.Spam:
                         listMain.Columns[0].Text = "差出人";
                         listMain.Columns[1].Text = "件名";
                         listMain.Columns[2].Text = "受信日時";
@@ -512,7 +521,7 @@ namespace MizuMail
                 labelMessage.Text = "メール送信中...";
                 statusStrip1.Refresh();
 
-                using (var client = new SmtpClient())
+                using (var client = new MailKit.Net.Smtp.SmtpClient())
                 {
                     await client.ConnectAsync(Mail.smtpServerName, Mail.smtpPortNo, SecureSocketOptions.Auto);
                     await client.AuthenticateAsync(Mail.userName, Mail.password);
@@ -633,6 +642,14 @@ namespace MizuMail
         {
             if (!e.IsSelected)
                 return;
+
+            if (listMain.SelectedItems.Count != 1)
+            {
+                // 複数選択時はプレビューをクリア or 何もしない
+                richTextBody.Text = "";
+                browserMail.NavigateToString("<html></html>");
+                return;
+            }
 
             Mail mail = e.Item.Tag as Mail;
             if (mail == null)
@@ -853,6 +870,7 @@ namespace MizuMail
 
             // ③ mbox フォルダ構造保証
             Directory.CreateDirectory(folderManager.Inbox.FullPath);
+            Directory.CreateDirectory(folderManager.Spam.FullPath);
             Directory.CreateDirectory(folderManager.Send.FullPath);
             Directory.CreateDirectory(folderManager.Draft.FullPath);
             Directory.CreateDirectory(folderManager.Trash.FullPath);
@@ -864,9 +882,10 @@ namespace MizuMail
             TreeNode inboxNode = root.Nodes[0];
             MailFolder inboxFolder = folderManager.Inbox;
             root.Nodes[0].Tag = folderManager.Inbox;
-            root.Nodes[1].Tag = folderManager.Send;
-            root.Nodes[2].Tag = folderManager.Draft;
-            root.Nodes[3].Tag = folderManager.Trash;
+            root.Nodes[1].Tag = folderManager.Spam;
+            root.Nodes[2].Tag = folderManager.Send;
+            root.Nodes[3].Tag = folderManager.Draft;
+            root.Nodes[4].Tag = folderManager.Trash;
 
             // ⑤ inbox サブフォルダ読み込み（MailFolder 再帰）
             LoadInboxFolders(inboxNode, inboxFolder);
@@ -1998,6 +2017,11 @@ namespace MizuMail
 
                 item.SubItems.Add(mail.mailName);
 
+                string preview = mail.body?.Replace("\r", "").Replace("\n", " ");
+                if (!string.IsNullOrEmpty(preview) && preview.Length > 30)
+                    preview = preview.Substring(0, 30) + "…";
+                item.SubItems.Add(preview);
+
                 if (HasAttachment(mail))
                     item.ImageKey = "attach";
 
@@ -2379,8 +2403,8 @@ namespace MizuMail
             if (parent == null)
                 return;
 
-            // inbox / send / trash 以外はサブフォルダ作成OK
-            if (parent.Type == FolderType.Send || parent.Type == FolderType.Draft || parent.Type == FolderType.Trash)
+            // spam / send / draft / trash 以外はサブフォルダ作成OK
+            if (parent.Type == FolderType.Spam || parent.Type == FolderType.Send || parent.Type == FolderType.Draft || parent.Type == FolderType.Trash)
             {
                 MessageBox.Show("このフォルダにはサブフォルダを作成できません。");
                 return;
@@ -2448,6 +2472,7 @@ namespace MizuMail
             }
 
             if (folder.Type == FolderType.Inbox ||
+                folder.Type == FolderType.Spam ||
                 folder.Type == FolderType.Send ||
                 folder.Type == FolderType.Draft ||
                 folder.Type == FolderType.Trash)
@@ -2634,12 +2659,12 @@ namespace MizuMail
 
             // ★ フォルダ読み込み前に mailCache を整理
             //   このフォルダ配下のキャッシュだけ削除する
-            var removeKeys = mailCache.Keys
+            /*var removeKeys = mailCache.Keys
                 .Where(k => k.StartsWith(folder.FullPath, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             foreach (var key in removeKeys)
-                mailCache.Remove(key);
+                mailCache.Remove(key);*/
 
             string[] files = Directory.GetFiles(folder.FullPath, "*.eml");
 
@@ -2659,11 +2684,21 @@ namespace MizuMail
                     mail.notReadYet = mail.mailName.EndsWith("_unread.eml", StringComparison.OrdinalIgnoreCase);
 
                     var fromMailbox = message.From.Mailboxes.FirstOrDefault();
-                    mail.from = fromMailbox != null
-                        ? (!string.IsNullOrEmpty(fromMailbox.Name)
+                    if (fromMailbox != null)
+                    {
+                        // 既存の文字列版（UI 表示用）
+                        mail.from = !string.IsNullOrEmpty(fromMailbox.Name)
                             ? fromMailbox.Name + " <" + fromMailbox.Address + ">"
-                            : fromMailbox.Address)
-                        : "(差出人なし)";
+                            : fromMailbox.Address;
+
+                        // ★ 新しい MailAddress 版（なりすまし検知用）
+                        mail.From = new MailAddress(fromMailbox.Address, fromMailbox.Name);
+                    }
+                    else
+                    {
+                        mail.from = "(差出人なし)";
+                        mail.From = new MailAddress("unknown@example.com", "(差出人なし)");
+                    }
 
                     if (message.To != null && message.To.Mailboxes.Any())
                     {
@@ -2694,26 +2729,11 @@ namespace MizuMail
                     mail.isDraft = message.Headers["X-MizuMail-Draft"] == "1";
 
                     // ★ 本文読み込み（TextPart / Multipart 両対応）
-                    string bodyText = "";
+                    string bodyText = message.GetTextBody(MimeKit.Text.TextFormat.Plain) 
+                        ?? message.GetTextBody(MimeKit.Text.TextFormat.Html)
+                        ?? "";
 
-                    if (message.Body is TextPart)
-                    {
-                        bodyText = ((TextPart)message.Body).Text;
-                    }
-                    else if (message.Body is Multipart)
-                    {
-                        var mp = (Multipart)message.Body;
-                        for (int i = 0; i < mp.Count; i++)
-                        {
-                            if (mp[i] is TextPart)
-                            {
-                                bodyText = ((TextPart)mp[i]).Text;
-                                break;
-                            }
-                        }
-                    }
-
-                    mail.body = bodyText ?? "";
+                    mail.body = bodyText;
 
                     list.Add(mail);
 
@@ -3091,6 +3111,7 @@ namespace MizuMail
 
             // システムフォルダ禁止
             if (folder.Type == FolderType.Inbox ||
+                folder.Type == FolderType.Spam ||
                 folder.Type == FolderType.Send ||
                 folder.Type == FolderType.Draft ||
                 folder.Type == FolderType.Trash)
@@ -3835,6 +3856,13 @@ namespace MizuMail
                     }
                 }
 
+                // なりすまし防止
+                if (IsSuspiciousSender(mail))
+                {
+                    MoveMailWithUndo(mail, folderManager.Spam);
+                    return;
+                }
+
                 if (!match)
                     continue;
 
@@ -3891,6 +3919,7 @@ namespace MizuMail
                 treeMain.Nodes.Add(root);
 
                 AddSystemFolder(root, folderManager.Inbox);
+                AddSystemFolder(root, folderManager.Spam);
                 AddSystemFolder(root, folderManager.Send);
                 AddSystemFolder(root, folderManager.Draft);
                 AddSystemFolder(root, folderManager.Trash);
@@ -3991,6 +4020,8 @@ namespace MizuMail
             {
                 case FolderType.Inbox:
                     return "inbox";
+                case FolderType.Spam:
+                    return "spam";
                 case FolderType.Send:
                     return "send";
                 case FolderType.Trash:
@@ -4000,23 +4031,6 @@ namespace MizuMail
                 default:
                     return unread > 0 ? "folder_unread" : "folder";
             }
-        }
-
-        public static void SetBrowserFeatureControl()
-        {
-            var fileName = System.IO.Path.GetFileName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
-
-            try
-            {
-                using (var key = Registry.CurrentUser.CreateSubKey(
-                    @"Software\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION",
-                    RegistryKeyPermissionCheck.ReadWriteSubTree))
-                {
-                    // 11001 = IE11 Edge モード
-                    key.SetValue(fileName, 11001, RegistryValueKind.DWord);
-                }
-            }
-            catch { }
         }
 
         private void ShowHtml(string html)
@@ -4315,5 +4329,212 @@ namespace MizuMail
 
             MessageBox.Show("アドレス帳に追加しました。");
         }
+
+        public static int Levenshtein(string s, string t)
+        {
+            if (string.IsNullOrEmpty(s)) return t?.Length ?? 0;
+            if (string.IsNullOrEmpty(t)) return s.Length;
+
+            int[,] d = new int[s.Length + 1, t.Length + 1];
+
+            for (int i = 0; i <= s.Length; i++)
+                d[i, 0] = i;
+
+            for (int j = 0; j <= t.Length; j++)
+                d[0, j] = j;
+
+            for (int i = 1; i <= s.Length; i++)
+            {
+                for (int j = 1; j <= t.Length; j++)
+                {
+                    int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost
+                    );
+                }
+            }
+
+            return d[s.Length, t.Length];
+        }
+
+        public static string ExtractBrandName(string displayName)
+        {
+            if (string.IsNullOrEmpty(displayName))
+                return "";
+
+            // 英字だけ抽出
+            var alpha = new string(displayName.Where(c => char.IsLetter(c) && c <= 127).ToArray());
+            if (!string.IsNullOrEmpty(alpha))
+                return alpha.ToLowerInvariant();
+
+            // 日本語だけ抽出（漢字・ひらがな・カタカナ）
+            var jp = new string(displayName.Where(c =>
+                (c >= 0x4E00 && c <= 0x9FFF) ||     // 漢字
+                (c >= 0x3040 && c <= 0x309F) ||     // ひらがな
+                (c >= 0x30A0 && c <= 0x30FF)        // カタカナ
+            ).ToArray());
+
+            return jp;
+        }
+
+        public static string ExtractDomain(string address)
+        {
+            if (string.IsNullOrEmpty(address))
+                return "";
+
+            int at = address.IndexOf('@');
+            if (at < 0) return "";
+
+            return address.Substring(at + 1).ToLowerInvariant();
+        }
+
+        public static string ExtractDomainMain(string domain)
+        {
+            if (string.IsNullOrEmpty(domain))
+                return "";
+
+            var parts = domain.Split('.');
+
+            // 例: e.resonabank.co.jp → ["e","resonabank","co","jp"]
+            if (parts.Length >= 3)
+            {
+                // 最後が jp / kr / in など → 企業名は最後から3番目
+                return parts[parts.Length - 3].ToLowerInvariant();
+            }
+
+            // それ以外は最後から2番目
+            if (parts.Length >= 2)
+                return parts[parts.Length - 2].ToLowerInvariant();
+
+            return domain.ToLowerInvariant();
+        }
+
+        public static bool IsJapanese(string s)
+        {
+            return s.Any(c =>
+                (c >= 0x3040 && c <= 0x309F) || // ひらがな
+                (c >= 0x30A0 && c <= 0x30FF) || // カタカナ
+                (c >= 0x4E00 && c <= 0x9FFF));  // 漢字
+        }
+
+        public static bool IsAscii(string s)
+        {
+            return s.All(c => c < 128);
+        }
+
+        static readonly HashSet<string> DomainIgnoreList = new HashSet<string>
+        {
+            "info", "mail", "news", "mailing", "support", "contact",
+            "noreply", "no-reply", "service", "update", "notification"
+        };
+
+        static readonly Dictionary<string, HashSet<string>> BrandDomainWhitelist = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Amazon
+            ["amazon"] = new HashSet<string>
+            {
+                "amazon", "amazonaws", "amazonses", "amazonservices", "amazon-adsystem", "amazonpay"
+            },
+            
+            // Apple
+            ["apple"] = new HashSet<string>
+            {
+                "apple", "insideapple", "email", "developer", "id", "updates", "news"
+            },
+            // 楽天
+            ["rakuten"] = new HashSet<string>
+            {
+                "rakuten", "rakuten-card", "rakuten-bank", "rakuten-sec", "rakuten-pay"
+            },
+            // 三井住友カード
+            ["smbc"] = new HashSet<string> { "smbc", "vpass" },
+            ["三井住友"] = new HashSet<string> { "smbc", "vpass" },
+            
+            // ゆうちょ銀行
+            ["ゆうちょ"] = new HashSet<string> { "jp-bank", "japanpost", "yucho" },
+            
+            // PayPay銀行
+            ["paypay-bank"] = new HashSet<string> { "paypay-bank", "jnb", "japannetbank" },
+            
+            // PayPay（決済）
+            ["paypay"] = new HashSet<string> { "paypay", "paypay-bank", "paypay-card", "yahoo" },
+
+            // Yahoo!
+            ["yahoo"] = new HashSet<string> { "yahoo", "ybb" },
+
+            // au / au PAY
+            ["au"] = new HashSet<string> { "au", "kddi", "auone", "aupay" },
+            ["kddi"] = new HashSet<string> { "au", "kddi", "auone", "aupay" },
+
+            // docomo / d払い
+            ["docomo"] = new HashSet<string> { "docomo", "nttdocomo", "dpoint" },
+            ["ドコモ"] = new HashSet<string> { "docomo", "nttdocomo", "dpoint" },
+
+            // SoftBank
+            ["softbank"] = new HashSet<string> { "softbank", "ymobile" },
+            
+            // LINE
+            ["line"] = new HashSet<string> { "line", "linecorp", "linepay" },
+            
+            // メルカリ
+            ["mercari"] = new HashSet<string> { "mercari" }
+        };
+
+        public static bool IsSuspiciousSender(Mail mail)
+        {
+            string brand = ExtractBrandName(mail.From.DisplayName);
+            string domain = ExtractDomain(mail.From.Address);
+            string domainMain = ExtractDomainMain(domain);
+
+            // ブランド名 or ドメインが空 → 判定しない
+            if (string.IsNullOrEmpty(brand) || string.IsNullOrEmpty(domainMain))
+                return false;
+
+            // 1. 無視すべき一般語ドメイン（info, mail, support など）
+            if (DomainIgnoreList.Contains(domainMain))
+                return false;
+
+            // 2. ホワイトリスト方式（ブランド名 → 許可ドメイン）
+            foreach (var kv in BrandDomainWhitelist)
+            {
+                // ブランド名にキーが含まれているか（日本語/英語両対応）
+                if (brand.IndexOf(kv.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // 許可ドメインに含まれていなければ偽装
+                    return !kv.Value.Contains(domainMain);
+                }
+            }
+
+            // 3. 日本語ブランド名は距離判定しない
+            if (!IsAscii(brand))
+                return false;
+
+            // 4. 長さ差が大きい場合は距離判定しない（Apple Developer 対策）
+            if (Math.Abs(brand.Length - domainMain.Length) >= 5)
+                return false;
+
+            // 5. 通常の距離判定（英字ブランド名のみ）
+            int distance = Levenshtein(brand, domainMain);
+
+            logger.Debug($"[SpoofCheck] Brand='{brand}', Domain='{domainMain}', Distance={distance}, From='{mail.from}'");
+
+            return distance >= 8;
+        }
+
+        public static MailAddress ParseMailAddress(string raw)
+        {
+            try
+            {
+                return new MailAddress(raw);
+            }
+            catch
+            {
+                // 失敗したら DisplayName だけでも返す
+                return new MailAddress("unknown@example.com", raw);
+            }
+        }
+
     }
 }

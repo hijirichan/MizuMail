@@ -21,6 +21,7 @@ namespace MizuMail
 
             Rules = rules.Select(r => new MailRule
             {
+                UseRegex = r.UseRegex,
                 Contains = r.Contains,
                 From = r.From,
                 MoveTo = r.MoveTo

@@ -12,6 +12,7 @@ namespace MizuMail
         Send,
         Trash,
         Draft,
+        Spam,
         InboxSub
     }
 
@@ -39,6 +40,7 @@ namespace MizuMail
         public MailFolder Send { get; }
         public MailFolder Trash { get; }
         public MailFolder Draft { get; }
+        public MailFolder Spam { get; }
 
         public List<MailFolder> InboxSubFolders { get; } = new List<MailFolder>();
 
@@ -51,6 +53,10 @@ namespace MizuMail
             Inbox = new MailFolder("Inbox", Path.Combine(baseDir, "inbox"), FolderType.Inbox)
             {
                 DisplayName = "受信メール"
+            };
+            Spam = new MailFolder("Spam", Path.Combine(baseDir, "spam"), FolderType.Spam)
+            {
+                DisplayName = "迷惑メール"
             };
             Send = new MailFolder("Send", Path.Combine(baseDir, "send"), FolderType.Send)
             {
@@ -66,6 +72,7 @@ namespace MizuMail
             };
 
             Directory.CreateDirectory(Inbox.FullPath);
+            Directory.CreateDirectory(Spam.FullPath);
             Directory.CreateDirectory(Send.FullPath);
             Directory.CreateDirectory(Trash.FullPath);
             Directory.CreateDirectory(Draft.FullPath);
@@ -94,8 +101,14 @@ namespace MizuMail
                 case FolderType.Inbox:
                     return Inbox;
 
+                case FolderType.Spam:
+                    return Spam;
+
                 case FolderType.Send:
                     return Send;
+
+                case FolderType.Draft:
+                    return Draft;
 
                 case FolderType.Trash:
                     return Trash;
@@ -108,7 +121,9 @@ namespace MizuMail
         public MailFolder FindFolderByName(string name)
         {
             if (name == "inbox") return Inbox;
+            if (name == "spam") return Spam;
             if (name == "send") return Send;
+            if (name == "draft") return Draft;
             if (name == "trash") return Trash;
 
             return InboxSubFolders.FirstOrDefault(f => f.Name == name);
@@ -123,8 +138,14 @@ namespace MizuMail
             if (string.Equals(Inbox.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
                 return Inbox;
 
+            if (string.Equals(Spam.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return Spam;
+
             if (string.Equals(Send.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
                 return Send;
+
+            if (string.Equals(Draft.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return Draft;
 
             if (string.Equals(Trash.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
                 return Trash;
@@ -145,6 +166,8 @@ namespace MizuMail
             {
                 case "Inbox":
                     return Inbox;
+                case "Spam":
+                    return Spam;
                 case "Send":
                     return Send;
                 case "Draft":
@@ -161,8 +184,9 @@ namespace MizuMail
             if (string.IsNullOrWhiteSpace(name))
                 return null;
 
-            // ルート4フォルダから検索開始
+            // ルート5フォルダから検索開始
             return FindFolderRecursive(Inbox, name)
+                ?? FindFolderRecursive(Spam, name)
                 ?? FindFolderRecursive(Send, name)
                 ?? FindFolderRecursive(Draft, name)
                 ?? FindFolderRecursive(Trash, name);
@@ -216,6 +240,9 @@ namespace MizuMail
             {
                 case "inbox":
                     current = Inbox;
+                    break;
+                case "spam":
+                    current = Spam;
                     break;
                 case "send":
                     current = Send;
