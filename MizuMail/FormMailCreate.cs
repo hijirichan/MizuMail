@@ -284,8 +284,9 @@ namespace MizuMail
         /// </summary>
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            // 送信フラグがfalseかつ宛先、件名、本文のいずれかが入力されている状態で閉じる場合、確認ダイアログを表示する
-            if (senderEmail == false && (!string.IsNullOrWhiteSpace(textMailTo.Text) || !string.IsNullOrWhiteSpace(textMailSubject.Text) || !string.IsNullOrWhiteSpace(textMailBody.Text)))
+            var isEdit = (!string.IsNullOrWhiteSpace(textMailTo.Text) || !string.IsNullOrWhiteSpace(textMailSubject.Text) || !string.IsNullOrWhiteSpace(textMailBody.Text) || buttonAttachList?.DropDownItems?.Count > 0);
+            // 送信フラグがfalseかつ宛先、件名、本文、添付ファイルが1件以上のいずれかが入力されている状態で閉じる場合、確認ダイアログを表示する
+            if (senderEmail == false && isEdit)
             {
                 var result = MessageBox.Show("編集中の内容が失われます。本当に閉じますか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (result != DialogResult.Yes)
@@ -605,6 +606,22 @@ namespace MizuMail
                     break;
                 }
             }
+        }
+
+        private void menuInsertSignature_Click(object sender, EventArgs e)
+        {
+            FormMain form = new FormMain();
+            var sig = form.LoadSignature();
+
+            if (sig.Enabled && !string.IsNullOrWhiteSpace(sig.Signature))
+            {
+                textMailBody.SelectedText = "\r\n" + sig.Signature;
+            }
+        }
+
+        private void menuInsertAttachment_Click(object sender, EventArgs e)
+        {
+            toolAddAttachment_Click(sender, e);
         }
     }
 }

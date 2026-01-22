@@ -149,6 +149,12 @@
     <Compile Include="FormRuleEditor.Designer.cs">
       <DependentUpon>FormRuleEditor.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormSignature.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormSignature.Designer.cs">
+      <DependentUpon>FormSignature.cs</DependentUpon>
+    </Compile>
     <Compile Include="MailRule.cs" />
     <Compile Include="Prompt.cs" />
     <Compile Include="FindDialog.cs">
@@ -185,6 +191,7 @@
     <Compile Include="ReplaceDialog.Designer.cs">
       <DependentUpon>ReplaceDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="SignatureConfig.cs" />
     <Compile Include="UndoMeta.cs" />
     <EmbeddedResource Include="AboutForm.resx">
       <DependentUpon>AboutForm.cs</DependentUpon>
@@ -213,6 +220,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="FormRuleEditor.resx">
       <DependentUpon>FormRuleEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormSignature.resx">
+      <DependentUpon>FormSignature.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -245,6 +255,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="help\MizuMail.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="MizuMail.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

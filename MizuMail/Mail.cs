@@ -76,17 +76,49 @@ namespace MizuMail
 
         public static Mail FromMimeMessage(MimeMessage msg)
         {
-            string from = msg.From?.ToString() ?? "";
-            string cc = msg.Cc?.ToString() ?? "";
-            string bcc = msg.Bcc?.ToString() ?? "";
-            string subject = msg.Subject ?? "";
-            string body = msg.TextBody ?? msg.HtmlBody ?? "";
-            string date = msg.Date.ToString("yyyy/MM/dd HH:mm:ss");
+            if (msg == null)
+                return null;
 
-            // mailName は後で上書きするので仮でOK
-            string mailName = Guid.NewGuid().ToString() + ".eml";
+            Mail mail = new Mail();
 
-            return new Mail(from, cc, bcc, subject, body, null, date, mailName, "", true);
+            // ★ MimeMessage を保持（後で本文や添付を読むために必須）
+            mail.message = msg;
+
+            // ★ 差出人・宛先
+            mail.From = msg.From?.Mailboxes?.FirstOrDefault() != null ? new MailAddress(msg.From.Mailboxes.First().Address, msg.From.Mailboxes.First().Name) : null;
+            mail.from = msg.From?.ToString() ?? "";
+            mail.address = msg.To?.ToString() ?? "";
+            mail.ccaddress = msg.Cc?.ToString() ?? "";
+            mail.bccaddress = msg.Bcc?.ToString() ?? "";
+
+            // ★ 件名
+            mail.subject = msg.Subject ?? "";
+
+            // ★ 本文（安全版）
+            mail.body =
+                msg.GetTextBody(MimeKit.Text.TextFormat.Plain) ??
+                msg.GetTextBody(MimeKit.Text.TextFormat.Html) ??
+                "";
+
+            // ★ 日付
+            mail.date = msg.Date.ToString("yyyy/MM/dd HH:mm:ss");
+
+            // ★ 添付ファイル
+            mail.hasAtach = msg.Attachments?.Any() ?? false;
+            mail.attachList = msg.Attachments?
+                .Select(a => a.ContentDisposition?.FileName ?? a.ContentType.Name)
+                .Where(n => !string.IsNullOrEmpty(n))
+                .ToList()
+                ?? new List<string>();
+
+            // ★ mailName は後で上書きされるので仮でOK
+            mail.mailName = Guid.NewGuid().ToString() + ".eml";
+
+            // ★ Folder は受信後に Pop3Receive 側で必ず設定する
+            // mail.Folder = folderManager.Inbox; ← ここでは設定しない
+
+            return mail;
         }
+
     }
 }

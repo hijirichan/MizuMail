@@ -62,6 +62,9 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.labelMessage = new System.Windows.Forms.ToolStripStatusLabel();
             this.buttonAttachList = new System.Windows.Forms.ToolStripDropDownButton();
+            this.挿入IToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuInsertSignature = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuInsertAttachment = new System.Windows.Forms.ToolStripMenuItem();
             this.contextAddress.SuspendLayout();
             this.toolStripContainer1.ContentPanel.SuspendLayout();
             this.toolStripContainer1.TopToolStripPanel.SuspendLayout();
@@ -259,7 +262,8 @@
             this.menuStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItem1,
-            this.menuEdit});
+            this.menuEdit,
+            this.挿入IToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(1163, 28);
@@ -490,6 +494,29 @@
             this.buttonAttachList.Visible = false;
             this.buttonAttachList.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.buttonAttachList_DropDownItemClicked);
             // 
+            // 挿入IToolStripMenuItem
+            // 
+            this.挿入IToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuInsertSignature,
+            this.menuInsertAttachment});
+            this.挿入IToolStripMenuItem.Name = "挿入IToolStripMenuItem";
+            this.挿入IToolStripMenuItem.Size = new System.Drawing.Size(67, 24);
+            this.挿入IToolStripMenuItem.Text = "挿入(&I)";
+            // 
+            // menuInsertSignature
+            // 
+            this.menuInsertSignature.Name = "menuInsertSignature";
+            this.menuInsertSignature.Size = new System.Drawing.Size(225, 26);
+            this.menuInsertSignature.Text = "署名(&S)";
+            this.menuInsertSignature.Click += new System.EventHandler(this.menuInsertSignature_Click);
+            // 
+            // menuInsertAttachment
+            // 
+            this.menuInsertAttachment.Name = "menuInsertAttachment";
+            this.menuInsertAttachment.Size = new System.Drawing.Size(224, 26);
+            this.menuInsertAttachment.Text = "添付ファイル(&A)";
+            this.menuInsertAttachment.Click += new System.EventHandler(this.menuInsertAttachment_Click);
+            // 
             // FormMailCreate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
@@ -572,5 +599,8 @@
         private System.Windows.Forms.ToolStripMenuItem menuReplace;
         private System.Windows.Forms.ContextMenuStrip contextAddress;
         private System.Windows.Forms.ToolStripMenuItem menuSelectFromAddressBook;
+        private System.Windows.Forms.ToolStripMenuItem 挿入IToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem menuInsertSignature;
+        private System.Windows.Forms.ToolStripMenuItem menuInsertAttachment;
     }
 }
