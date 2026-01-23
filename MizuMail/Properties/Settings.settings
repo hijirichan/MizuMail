@@ -3,22 +3,25 @@
   <Profiles />
   <Settings>
     <Setting Name="ColWidth0" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">200</Value>
+      <Value Profile="(Default)">24</Value>
     </Setting>
     <Setting Name="ColWidth1" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">100</Value>
+      <Value Profile="(Default)">200</Value>
     </Setting>
     <Setting Name="ColWidth2" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">150</Value>
+      <Value Profile="(Default)">100</Value>
     </Setting>
     <Setting Name="ColWidth3" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">80</Value>
+      <Value Profile="(Default)">150</Value>
     </Setting>
     <Setting Name="ColWidth4" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">0</Value>
+      <Value Profile="(Default)">80</Value>
     </Setting>
     <Setting Name="ColWidth5" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">200</Value>
+    </Setting>
+    <Setting Name="ColWidth6" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

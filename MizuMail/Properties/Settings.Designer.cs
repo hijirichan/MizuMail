@@ -25,7 +25,7 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        [global::System.Configuration.DefaultSettingValueAttribute("24")]
         public int ColWidth0 {
             get {
                 return ((int)(this["ColWidth0"]));
@@ -37,7 +37,7 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
         public int ColWidth1 {
             get {
                 return ((int)(this["ColWidth1"]));
@@ -49,7 +49,7 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("150")]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
         public int ColWidth2 {
             get {
                 return ((int)(this["ColWidth2"]));
@@ -61,7 +61,7 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        [global::System.Configuration.DefaultSettingValueAttribute("150")]
         public int ColWidth3 {
             get {
                 return ((int)(this["ColWidth3"]));
@@ -73,7 +73,7 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
         public int ColWidth4 {
             get {
                 return ((int)(this["ColWidth4"]));
@@ -92,6 +92,18 @@ namespace MizuMail.Properties {
             }
             set {
                 this["ColWidth5"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ColWidth6 {
+            get {
+                return ((int)(this["ColWidth6"]));
+            }
+            set {
+                this["ColWidth6"] = value;
             }
         }
     }

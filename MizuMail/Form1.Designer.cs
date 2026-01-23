@@ -45,6 +45,7 @@ namespace MizuMail
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAttachmentFileAllSave = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripSeparator();
             this.menuFileClearTrash = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
@@ -60,6 +61,7 @@ namespace MizuMail
             this.設定SToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAccountSetting = new System.Windows.Forms.ToolStripMenuItem();
             this.menuReleEdit = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuSignatureSetting = new System.Windows.Forms.ToolStripMenuItem();
             this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLocalFiltter = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAddressBook = new System.Windows.Forms.ToolStripMenuItem();
@@ -82,6 +84,8 @@ namespace MizuMail
             this.toolReplyButton = new System.Windows.Forms.ToolStripButton();
             this.toolDeleteButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolShowHeader = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             this.toolHelpButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolFilterCombo = new System.Windows.Forms.ToolStripComboBox();
@@ -118,8 +122,8 @@ namespace MizuMail
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
-            this.menuAttachmentFileAllSave = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuSignatureSetting = new System.Windows.Forms.ToolStripMenuItem();
+            this.columnPreview = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnIcon = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -172,6 +176,13 @@ namespace MizuMail
             this.menuSaveAs.Text = "名前をつけて保存(&A)";
             this.menuSaveAs.ToolTipText = "選択したメールに名前をつけて保存します。";
             this.menuSaveAs.Click += new System.EventHandler(this.menuSaveAs_Click);
+            // 
+            // menuAttachmentFileAllSave
+            // 
+            this.menuAttachmentFileAllSave.Name = "menuAttachmentFileAllSave";
+            this.menuAttachmentFileAllSave.Size = new System.Drawing.Size(292, 26);
+            this.menuAttachmentFileAllSave.Text = "添付ファイルをすべて保存(&T)";
+            this.menuAttachmentFileAllSave.Click += new System.EventHandler(this.menuAttachmentFileAllSave_Click);
             // 
             // toolStripMenuItem4
             // 
@@ -280,7 +291,7 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
@@ -288,9 +299,16 @@ namespace MizuMail
             // menuReleEdit
             // 
             this.menuReleEdit.Name = "menuReleEdit";
-            this.menuReleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuReleEdit.Size = new System.Drawing.Size(212, 26);
             this.menuReleEdit.Text = "振り分け設定(&R)";
             this.menuReleEdit.Click += new System.EventHandler(this.menuReleEdit_Click);
+            // 
+            // menuSignatureSetting
+            // 
+            this.menuSignatureSetting.Name = "menuSignatureSetting";
+            this.menuSignatureSetting.Size = new System.Drawing.Size(212, 26);
+            this.menuSignatureSetting.Text = "署名の設定(&S)";
+            this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
             // 
             // ツールTToolStripMenuItem
             // 
@@ -430,6 +448,8 @@ namespace MizuMail
             this.toolReplyButton,
             this.toolDeleteButton,
             this.toolStripSeparator2,
+            this.toolShowHeader,
+            this.toolStripSeparator6,
             this.toolHelpButton,
             this.toolStripSeparator3,
             this.toolFilterCombo,
@@ -498,6 +518,22 @@ namespace MizuMail
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new System.Drawing.Size(6, 28);
+            // 
+            // toolShowHeader
+            // 
+            this.toolShowHeader.CheckOnClick = true;
+            this.toolShowHeader.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.toolShowHeader.Image = ((System.Drawing.Image)(resources.GetObject("toolShowHeader.Image")));
+            this.toolShowHeader.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolShowHeader.Name = "toolShowHeader";
+            this.toolShowHeader.Size = new System.Drawing.Size(77, 25);
+            this.toolShowHeader.Text = "ヘッダ表示";
+            this.toolShowHeader.Click += new System.EventHandler(this.toolShowHeader_Click);
+            // 
+            // toolStripSeparator6
+            // 
+            this.toolStripSeparator6.Name = "toolStripSeparator6";
+            this.toolStripSeparator6.Size = new System.Drawing.Size(6, 28);
             // 
             // toolHelpButton
             // 
@@ -682,10 +718,12 @@ namespace MizuMail
             // 
             this.listMain.Activation = System.Windows.Forms.ItemActivation.OneClick;
             this.listMain.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnIcon,
             this.columnFromOrTo,
             this.columnSubject,
             this.columnDate,
             this.columnSize,
+            this.columnPreview,
             this.columnMailName});
             this.listMain.ContextMenuStrip = this.contextMenuStrip1;
             this.listMain.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -726,7 +764,7 @@ namespace MizuMail
             // columnMailName
             // 
             this.columnMailName.Text = "メールファイル名";
-            this.columnMailName.Width = 0;
+            this.columnMailName.Width = 111;
             // 
             // contextMenuStrip1
             // 
@@ -835,19 +873,15 @@ namespace MizuMail
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
             // 
-            // menuAttachmentFileAllSave
+            // columnPreview
             // 
-            this.menuAttachmentFileAllSave.Name = "menuAttachmentFileAllSave";
-            this.menuAttachmentFileAllSave.Size = new System.Drawing.Size(292, 26);
-            this.menuAttachmentFileAllSave.Text = "添付ファイルをすべて保存(&T)";
-            this.menuAttachmentFileAllSave.Click += new System.EventHandler(this.menuAttachmentFileAllSave_Click);
+            this.columnPreview.Text = "プレビュー";
+            this.columnPreview.Width = 100;
             // 
-            // menuSignatureSetting
+            // columnIcon
             // 
-            this.menuSignatureSetting.Name = "menuSignatureSetting";
-            this.menuSignatureSetting.Size = new System.Drawing.Size(224, 26);
-            this.menuSignatureSetting.Text = "署名の設定(&S)";
-            this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
+            this.columnIcon.Text = "";
+            this.columnIcon.Width = 24;
             // 
             // FormMain
             // 
@@ -967,6 +1001,10 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuAddToAddressBook;
         private System.Windows.Forms.ToolStripMenuItem menuAttachmentFileAllSave;
         private System.Windows.Forms.ToolStripMenuItem menuSignatureSetting;
+        private System.Windows.Forms.ToolStripButton toolShowHeader;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
+        private System.Windows.Forms.ColumnHeader columnPreview;
+        private System.Windows.Forms.ColumnHeader columnIcon;
     }
 }
 
