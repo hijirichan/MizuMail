@@ -52,6 +52,9 @@ namespace MizuMail
         public MailFolder LastFolder;           // 直前のフォルダ
         public string LastMailName;             // 直前のファイル名
         public string mailPath;                 // メールのフルパス
+        public bool isHtml;                     // 本文がHTML形式かどうか
+        public long sizeBytes;                  // ファイルサイズ（バイト）
+        public string preview;                  // プレビュー用の1行テキスト
 
         // コンストラクタ
         public Mail()
