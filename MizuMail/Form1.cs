@@ -1667,6 +1667,9 @@ namespace MizuMail
                         // ★ パス設定（必須）
                         mail.mailPath = inboxPath;
 
+                        // ★ ここが絶対に必要（今回の NullReference の原因）
+                        mail.Folder = folderManager.Inbox;
+
                         // ★ mailCache に登録（必須）
                         mailCache[inboxPath] = mail;
 
@@ -1817,6 +1820,9 @@ namespace MizuMail
 
                         // ★ パス設定（必須）
                         mail.mailPath = inboxPath;
+
+                        // ★ ここが絶対に必要（今回の NullReference の原因）
+                        mail.Folder = folderManager.Inbox;
 
                         // ★ mailCache に登録（必須）
                         mailCache[inboxPath] = mail;
@@ -3847,6 +3853,12 @@ namespace MizuMail
 
         private void MoveMailWithUndo(Mail mail, MailFolder newFolder)
         {
+            if (newFolder == null)
+            {
+                logger.Error("MoveMailWithUndo: newFolder is null");
+                return;
+            }
+
             string oldPath = ResolveMailPath(mail);
 
             // ★ 残像対策（1回でOK）
