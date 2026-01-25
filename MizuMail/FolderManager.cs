@@ -83,14 +83,18 @@ namespace MizuMail
         private void LoadInboxSubFolders()
         {
             InboxSubFolders.Clear();
+            LoadSubFoldersRecursive(Inbox);
+        }
 
-            if (!Directory.Exists(Inbox.FullPath))
-                return;
-
-            foreach (var dir in Directory.GetDirectories(Inbox.FullPath))
+        private void LoadSubFoldersRecursive(MailFolder parent)
+        {
+            foreach (var dir in Directory.GetDirectories(parent.FullPath))
             {
                 string name = Path.GetFileName(dir);
-                InboxSubFolders.Add(new MailFolder(name, dir, FolderType.InboxSub));
+                var sub = new MailFolder(name, dir, FolderType.InboxSub);
+                parent.SubFolders.Add(sub);
+
+                LoadSubFoldersRecursive(sub);
             }
         }
 
@@ -131,51 +135,44 @@ namespace MizuMail
 
         public MailFolder FindByPath(string fullPath)
         {
-            if (string.IsNullOrEmpty(fullPath))
-                return null;
+            return FindByPathRecursive(Inbox, fullPath)
+                ?? FindByPathRecursive(Spam, fullPath)
+                ?? FindByPathRecursive(Send, fullPath)
+                ?? FindByPathRecursive(Draft, fullPath)
+                ?? FindByPathRecursive(Trash, fullPath);
+        }
 
-            // 1. ルートフォルダ
-            if (string.Equals(Inbox.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                return Inbox;
+        private MailFolder FindByPathRecursive(MailFolder folder, string fullPath)
+        {
+            if (string.Equals(folder.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                return folder;
 
-            if (string.Equals(Spam.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                return Spam;
-
-            if (string.Equals(Send.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                return Send;
-
-            if (string.Equals(Draft.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                return Draft;
-
-            if (string.Equals(Trash.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                return Trash;
-
-            // 2. Inbox のサブフォルダ
-            foreach (var sub in InboxSubFolders)
+            foreach (var sub in folder.SubFolders)
             {
-                if (string.Equals(sub.FullPath, fullPath, StringComparison.OrdinalIgnoreCase))
-                    return sub;
+                var found = FindByPathRecursive(sub, fullPath);
+                if (found != null)
+                    return found;
             }
 
             return null;
         }
 
-        public MailFolder GetFolderByType(string type)
+        public MailFolder GetFolderByType(FolderType type)
         {
             switch (type)
             {
-                case "Inbox":
+                case FolderType.Inbox:
                     return Inbox;
-                case "Spam":
+                case FolderType.Spam:
                     return Spam;
-                case "Send":
+                case FolderType.Send:
                     return Send;
-                case "Draft":
+                case FolderType.Draft:
                     return Draft;
-                case "Trash":
+                case FolderType.Trash:
                     return Trash;
                 default:
-                    return Inbox;
+                    return null;
             }
         }
 

@@ -6,6 +6,7 @@ using MailKit.Security;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using MimeKit;
+using MimeKit.Encodings;
 using MimeKit.Text;
 using Newtonsoft.Json;
 using NLog;
@@ -64,6 +65,8 @@ namespace MizuMail
         private System.Windows.Forms.Timer resizeTimer;
         private int updateListViewCount = 0;
         private DateTime updateListViewStart = DateTime.MinValue;
+        HashSet<MailFolder> updatedFolders = new HashSet<MailFolder>();
+        private Dictionary<MailFolder, TreeNode> folderNodeMap = new Dictionary<MailFolder, TreeNode>();
 
         // ★ メールルール
         private List<MailRule> rules = new List<MailRule>();
@@ -659,8 +662,8 @@ namespace MizuMail
             toolMailProgress.Value = 0;
             toolMailProgress.Visible = false;
 
-            BuildTree();
-            UpdateView();
+            UpdateTreeView();   // 件数だけ更新
+            UpdateListView();   // 選択中フォルダの一覧を更新
         }
 
         private async void toolReceiveButton_Click(object sender, EventArgs e)
@@ -823,7 +826,8 @@ namespace MizuMail
 
             // ① FolderManager 初期化
             folderManager = new FolderManager();
-            await browserMail.EnsureCoreWebView2Async(null);
+            var env = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions("--allow-file-access-from-files"));
+            await browserMail.EnsureCoreWebView2Async(env);
             charWidth = TextRenderer.MeasureText("あ", listMain.Font).Width;
 
             // ② 設定読み込み
@@ -839,6 +843,8 @@ namespace MizuMail
 
             BuildTree();
 
+            await Task.Delay(50); // ★ TreeView 初期化完了を待つ
+
             // ④ TreeView の Tag を MailFolder に統一
             TreeNode root = treeMain.Nodes[0];
             TreeNode inboxNode = root.Nodes[0];
@@ -848,6 +854,7 @@ namespace MizuMail
             root.Nodes[2].Tag = folderManager.Send;
             root.Nodes[3].Tag = folderManager.Draft;
             root.Nodes[4].Tag = folderManager.Trash;
+            treeMain.SelectedNode = inboxNode; // ★ ここで初めて選択
 
             var img = new ImageList();
             img.ImageSize = new Size(16, 16);
@@ -967,9 +974,8 @@ namespace MizuMail
                 }
             }
 
-            // ★ UpdateView() は危険なので使わない
-            BuildTree();
-            UpdateListView();
+            UpdateTreeView();   // 件数だけ更新
+            UpdateListView();   // 選択中フォルダの一覧を更新
 
             currentMail = null;
             UpdateUndoState();
@@ -977,11 +983,17 @@ namespace MizuMail
 
         private void menuNotReadYet_Click(object sender, EventArgs e)
         {
-            if (currentMail == null)
+            if (listMain.SelectedItems.Count == 0)
                 return;
 
-            if (!currentMail.notReadYet)
-                ToggleReadState(currentMail);
+            foreach (ListViewItem item in listMain.SelectedItems)
+            {
+                if (item.Tag is Mail mail)
+                {
+                    if (!mail.notReadYet)
+                        ToggleReadState(mail);
+                }
+            }
 
             UpdateView();
         }
@@ -1016,6 +1028,7 @@ namespace MizuMail
                 string cc = form.textMailCc.Text;
                 string bcc = form.textMailBcc.Text;
                 string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text));
+                string date = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
                 // 宛先、本文がある場合
                 if (to != "" | body != "")
@@ -1026,7 +1039,7 @@ namespace MizuMail
                         subject = "無題";
                     }
                     // コレクションに追加する
-                    Mail mail = new Mail(to, cc, bcc, subject, body, atach, "未送信", "", "", true);
+                    Mail mail = new Mail(to, cc, bcc, subject, body, atach, date, "", "", true);
                     mail.isDraft = true;
                     mail.notReadYet = true;
                     mail.Folder = folderManager.Draft;
@@ -1335,6 +1348,7 @@ namespace MizuMail
                 string cc = form.textMailCc.Text;
                 string bcc = form.textMailBcc.Text;
                 string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text));
+                string date = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
                 // 宛先、本文がある場合
                 if (to != "" | body != "")
@@ -1345,7 +1359,7 @@ namespace MizuMail
                         subject = "無題";
                     }
                     // コレクションに追加する
-                    Mail mail = new Mail(to, cc, bcc, subject, body, atach, "未送信", "", "", true);
+                    Mail mail = new Mail(to, cc, bcc, subject, body, atach, date, "", "", true);
                     mail.isDraft = true;
                     mail.notReadYet = true;
                     mail.Folder = folderManager.Draft;
@@ -1659,6 +1673,9 @@ namespace MizuMail
                         // 振り分け処理
                         ApplyRules(mail);
 
+                        // 変更のあったフォルダを登録
+                        updatedFolders.Add(mail.Folder);
+
                         // ★ UIDL 保存
                         localUidls.Add(uidl);
                         mailCount++;
@@ -1718,7 +1735,7 @@ namespace MizuMail
             toolMailProgress.Visible = false;
 
             // ツリービューとリストビューの表示を更新する
-            BuildTree();
+            UpdateTreeView();
 
             if (!string.IsNullOrEmpty(prevFolderPath))
             {
@@ -1727,7 +1744,11 @@ namespace MizuMail
                     treeMain.SelectedNode = found;
             }
 
-            UpdateView();
+            // ★ 受信フォルダを再読み込みして mailCache を更新
+            foreach (var f in updatedFolders)
+                LoadEmlFolder(f);
+
+            UpdateListView();
         }
 
         private async Task Imap4Receive()
@@ -1803,6 +1824,9 @@ namespace MizuMail
                         // 振り分け処理
                         ApplyRules(mail);
 
+                        // 変更のあったフォルダを登録
+                        updatedFolders.Add(mail.Folder);
+
                         localUidls.Add(uid);
                         mailCount++;
                     }
@@ -1855,7 +1879,7 @@ namespace MizuMail
             toolMailProgress.Value = 0;
             toolMailProgress.Visible = false;
 
-            BuildTree();
+            UpdateTreeView();
 
             if (!string.IsNullOrEmpty(prevFolderPath))
             {
@@ -1864,7 +1888,11 @@ namespace MizuMail
                     treeMain.SelectedNode = found;
             }
 
-            UpdateView();
+            // ★ 受信フォルダを再読み込みして mailCache を更新
+            foreach (var f in updatedFolders)
+                LoadEmlFolder(f);
+
+            UpdateListView();
         }
 
         private TreeNode FindNodeByFolderPath(TreeNode node, string path)
@@ -1884,7 +1912,6 @@ namespace MizuMail
 
         private void menuUndoMail_Click(object sender, EventArgs e)
         {
-            // ★ Trash フォルダを走査して .meta を探す
             var metaFiles = Directory.GetFiles(folderManager.Trash.FullPath, "*.meta");
             if (metaFiles.Length == 0)
                 return;
@@ -1894,33 +1921,33 @@ namespace MizuMail
                 var json = File.ReadAllText(metaFile);
                 var meta = JsonConvert.DeserializeObject<UndoMeta>(json);
 
-                // ★ 対象メールのパス
                 string newPath = meta.NewPath;
                 string oldPath = meta.OldPath;
 
                 if (!File.Exists(newPath))
                     continue;
 
+                // ★ ごみ箱側のキャッシュを必ず削除（最重要）
+                if (mailCache.ContainsKey(newPath))
+                    mailCache.Remove(newPath);
+
+                // ★ oldPath に既存ファイルがあれば削除
+                if (File.Exists(oldPath))
+                    File.Delete(oldPath);
+
                 // ★ メールを元の場所へ戻す
                 Directory.CreateDirectory(Path.GetDirectoryName(oldPath));
                 File.Move(newPath, oldPath);
 
-                // ★ mailCache 更新
-                if (mailCache.ContainsKey(newPath))
-                    mailCache.Remove(newPath);
-
-                Mail mail = LoadSingleMail(oldPath);
-                mailCache[oldPath] = mail;
-
-                // ★ フォルダ復元
-                mail.Folder = folderManager.GetFolderByType(meta.OldFolder);
-
-                // ★ 保存
-                SaveMail(mail);
-
                 // ★ .meta 削除
                 File.Delete(metaFile);
             }
+
+            // ★ Undo したフォルダを丸ごと再読み込み（最重要）
+            LoadEmlFolder(folderManager.Inbox);
+            LoadEmlFolder(folderManager.Trash);
+            LoadEmlFolder(folderManager.Send);
+            LoadEmlFolder(folderManager.Draft);
 
             UpdateView();
         }
@@ -2226,6 +2253,8 @@ namespace MizuMail
 
         public void SaveMail(Mail mail)
         {
+            logger.Debug($"SaveMail called: {mail.mailPath}");
+
             if (mail == null)
                 return;
 
@@ -2594,15 +2623,33 @@ namespace MizuMail
             // ★ 複数メールをまとめて移動
             foreach (var mail in mails)
             {
+                bool fromTrash = (mail.Folder.Type == FolderType.Trash);
+
                 if (targetFolder.Type == FolderType.Trash)
                 {
+                    // ごみ箱へ移動 → Undo 情報を作る
                     MoveMailWithUndo(mail, folderManager.Trash);
                 }
                 else if (mail.Folder != targetFolder)
                 {
+                    // ごみ箱から出す場合は .meta を削除
+                    if (fromTrash)
+                    {
+                        string meta = mail.mailPath + ".meta";
+                        if (File.Exists(meta))
+                            File.Delete(meta);
+                    }
+
+                    // 通常の移動
                     MoveMailWithUndo(mail, targetFolder);
                 }
             }
+
+            // ★ D&D 完了後にフォルダを再読み込み（Undo と同じ）
+            LoadEmlFolder(folderManager.Inbox);
+            LoadEmlFolder(folderManager.Trash);
+            LoadEmlFolder(folderManager.Send);
+            LoadEmlFolder(folderManager.Draft);
 
             // ★ UI更新は DragDrop 完了後に行う（元のコードをそのまま）
             this.BeginInvoke(new Action(delegate
@@ -2757,6 +2804,7 @@ namespace MizuMail
 
                     mail.body = bodyText;
                     mail.isHtml = message.GetTextBody(MimeKit.Text.TextFormat.Html) != null;
+                    mail.preview = BuildPreview(mail.body, mail.isHtml);
 
                     LoadMailCache(mail);
 
@@ -3293,17 +3341,24 @@ namespace MizuMail
         private void LoadInboxFolders(TreeNode inboxNode, MailFolder inboxFolder)
         {
             inboxNode.Nodes.Clear();
-            inboxFolder.SubFolders.Clear();
-            folderManager.InboxSubFolders.Clear();
+            inboxFolder.SubFolders.Clear(); // ★ ここが唯一のサブフォルダリスト
 
             foreach (var dir in Directory.GetDirectories(inboxFolder.FullPath))
             {
                 string name = Path.GetFileName(dir);
-                var folder = new MailFolder(name, dir, FolderType.InboxSub);
 
-                inboxFolder.SubFolders.Add(folder);
-                folderManager.InboxSubFolders.Add(folder);
+                // ★ 既存のサブフォルダがあるか探す
+                var folder = inboxFolder.SubFolders
+                    .FirstOrDefault(f => f.FullPath.Equals(dir, StringComparison.OrdinalIgnoreCase));
 
+                // ★ なければ作る（これが唯一の new）
+                if (folder == null)
+                {
+                    folder = new MailFolder(name, dir, FolderType.InboxSub);
+                    inboxFolder.SubFolders.Add(folder);
+                }
+
+                // ★ TreeView に folderManager のインスタンスを入れる
                 TreeNode node = new TreeNode(name);
                 node.Tag = folder;
                 inboxNode.Nodes.Add(node);
@@ -3630,7 +3685,8 @@ namespace MizuMail
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
                 File.Delete(path);
 
-            // Mail オブジェクト自体は ListView 再描画で消えるので特に保持しない
+            // ★ これが必要
+            mailCache.Remove(path);
         }
 
         private void UndoDelete(Mail mail)
@@ -3695,11 +3751,17 @@ namespace MizuMail
 
         private void menuRead_Click(object sender, EventArgs e)
         {
-            if (currentMail == null)
+            if (listMain.SelectedItems.Count == 0)
                 return;
 
-            if (currentMail.notReadYet)
-                ToggleReadState(currentMail);
+            foreach (ListViewItem item in listMain.SelectedItems)
+            {
+                if (item.Tag is Mail mail)
+                {
+                    if (mail.notReadYet)
+                        ToggleReadState(mail);
+                }
+            }
 
             UpdateView();
         }
@@ -3786,14 +3848,15 @@ namespace MizuMail
         private void MoveMailWithUndo(Mail mail, MailFolder newFolder)
         {
             string oldPath = ResolveMailPath(mail);
+            FolderType oldFolderType = mail.Folder.Type;
+            string oldFolderPath = mail.Folder.FullPath;
             string oldName = mail.mailName;
 
-            // ★ Draft に移動する場合は必ず未送信扱いにする
+            // ★ 新しいファイル名を決める
             if (newFolder.Type == FolderType.Draft)
             {
                 mail.notReadYet = true;
 
-                // ファイル名を _unread に統一
                 if (!oldName.EndsWith("_unread.eml"))
                 {
                     string baseName = Path.GetFileNameWithoutExtension(oldName);
@@ -3802,7 +3865,6 @@ namespace MizuMail
             }
             else
             {
-                // Draft 以外は元の未読状態を維持
                 if (mail.notReadYet)
                 {
                     if (!oldName.EndsWith("_unread.eml"))
@@ -3816,16 +3878,32 @@ namespace MizuMail
 
             string newPath = Path.Combine(newFolder.FullPath, mail.mailName);
 
+            // ★ 先にファイルを移動する
             Directory.CreateDirectory(newFolder.FullPath);
             if (File.Exists(oldPath))
                 File.Move(oldPath, newPath);
 
+            // ★ mailCache 更新
             if (mailCache.ContainsKey(oldPath))
                 mailCache.Remove(oldPath);
 
             mail.mailPath = newPath;
             mail.Folder = newFolder;
             mailCache[newPath] = mail;
+
+            // ★ ごみ箱へ移動する場合だけ Undo 情報を JSON で保存（移動後に書く）
+            if (newFolder.Type == FolderType.Trash)
+            {
+                var meta = new UndoMeta
+                {
+                    OldPath = oldPath,
+                    NewPath = newPath,
+                    OldFolder = oldFolderType
+                };
+
+                string metaJson = JsonConvert.SerializeObject(meta, Formatting.Indented);
+                File.WriteAllText(newPath + ".meta", metaJson);
+            }
         }
 
         private Mail LoadSingleMail(string path)
@@ -3838,29 +3916,29 @@ namespace MizuMail
             Mail mail = new Mail();
             mail.mailName = Path.GetFileName(path);
 
-            // ★ From
+            // From
             var fromMailbox = message.From.Mailboxes.FirstOrDefault();
             mail.from = fromMailbox != null ? fromMailbox.ToString() : "";
 
-            // ★ To
+            // To
             mail.address = string.Join("; ", message.To.Mailboxes.Select(m => m.ToString()));
 
-            // ★ Cc
+            // Cc
             mail.ccaddress = string.Join("; ", message.Cc.Mailboxes.Select(m => m.ToString()));
 
-            // ★ Bcc
+            // Bcc
             mail.bccaddress = string.Join("; ", message.Bcc.Mailboxes.Select(m => m.ToString()));
 
-            // ★ Subject
+            // Subject
             mail.subject = message.Subject ?? "";
 
-            // ★ Body
-            mail.body = message.TextBody ?? "";
+            // ★ HTML メール対応（最重要）
+            mail.body = message.HtmlBody ?? message.TextBody ?? "";
 
-            // ★ Date
+            // Date
             mail.date = message.Date.LocalDateTime.ToString("yyyy/MM/dd HH:mm:ss");
 
-            // ★ 未読判定
+            // 未読判定
             mail.notReadYet = path.EndsWith("_unread.eml");
 
             return mail;
@@ -3996,35 +4074,96 @@ namespace MizuMail
 
         private void BuildTree()
         {
-            if (isBuildingTree)
-                return;
-
             isBuildingTree = true;
-
             try
             {
                 treeMain.BeginUpdate();
-                treeMain.Nodes.Clear();
 
-                TreeNode root = new TreeNode("メール");
-                root.Tag = null;
-                root.ImageKey = "folder";
-                root.SelectedImageKey = "folder";
+                treeMain.Nodes.Clear();
+                folderNodeMap.Clear();
+
+                // ルートノード
+                var root = new TreeNode("メール");
+                root.Tag = null; // ルートは MailFolder ではない
                 treeMain.Nodes.Add(root);
 
-                AddSystemFolder(root, folderManager.Inbox);
-                AddSystemFolder(root, folderManager.Spam);
-                AddSystemFolder(root, folderManager.Send);
-                AddSystemFolder(root, folderManager.Draft);
-                AddSystemFolder(root, folderManager.Trash);
+                // 受信
+                var inboxNode = CreateFolderNode("受信メール", folderManager.Inbox);
+                root.Nodes.Add(inboxNode);
+
+                // 迷惑
+                var spamNode = CreateFolderNode("迷惑メール", folderManager.Spam);
+                root.Nodes.Add(spamNode);
+
+                // 送信
+                var sendNode = CreateFolderNode("送信メール", folderManager.Send);
+                root.Nodes.Add(sendNode);
+
+                // 下書き
+                var draftNode = CreateFolderNode("下書き", folderManager.Draft);
+                root.Nodes.Add(draftNode);
+
+                // ごみ箱
+                var trashNode = CreateFolderNode("ごみ箱", folderManager.Trash);
+                root.Nodes.Add(trashNode);
+
+                // Inbox のサブフォルダ（既存の再帰ロジックをそのまま利用）
+                LoadInboxFolders(inboxNode, folderManager.Inbox);
 
                 treeMain.ExpandAll();
-                treeMain.EndUpdate();
             }
             finally
             {
+                treeMain.EndUpdate();
                 isBuildingTree = false;
             }
+
+            // 件数表示は既存の UpdateTreeView を使う
+            UpdateTreeView();
+        }
+
+        private TreeNode CreateFolderNode(string caption, MailFolder folder)
+        {
+            int count = Directory.GetFiles(folder.FullPath, "*.eml").Length;
+            var node = new TreeNode($"{caption}({count})");
+            node.Tag = folder;
+
+            // ★ フォルダ種別ごとにアイコンを設定
+            switch (folder.Type)
+            {
+                case FolderType.Inbox:
+                    node.ImageIndex = 1;            // 受信
+                    node.SelectedImageIndex = 1;
+                    break;
+
+                case FolderType.Spam:
+                    node.ImageIndex = 0;            // 迷惑
+                    node.SelectedImageIndex = 0;
+                    break;
+
+                case FolderType.Send:
+                    node.ImageIndex = 2;            // 送信
+                    node.SelectedImageIndex = 2;
+                    break;
+
+                case FolderType.Draft:
+                    node.ImageIndex = 3;            // 下書き
+                    node.SelectedImageIndex = 3;
+                    break;
+
+                case FolderType.Trash:
+                    node.ImageIndex = 4;            // ごみ箱
+                    node.SelectedImageIndex = 4;
+                    break;
+
+                default:
+                    node.ImageIndex = 0;            // 通常フォルダ
+                    node.SelectedImageIndex = 0;
+                    break;
+            }
+
+            folderNodeMap[folder] = node;
+            return node;
         }
 
         private void AddSystemFolder(TreeNode parent, MailFolder folder)
@@ -4131,81 +4270,115 @@ namespace MizuMail
         {
             if (browserMail.CoreWebView2 != null)
             {
-                browserMail.NavigateToString(html);
+                browserMail.CoreWebView2.NavigateToString(html);
+                return;
             }
-            else
+
+            // 初期化前なら初期化後に一度だけ実行
+            browserMail.CoreWebView2InitializationCompleted += (s, e) =>
             {
-                // 初期化完了後に実行する
-                browserMail.CoreWebView2InitializationCompleted += (s, e) =>
-                {
-                    browserMail.NavigateToString(html);
-                };
-            }
+                browserMail.CoreWebView2.NavigateToString(html);
+            };
         }
 
-        private void ShowHtmlWithInlineImages(MimeMessage message)
+        private async void ShowHtmlWithInlineImages(MimeMessage message, Mail mail)
         {
-            string html = message.GetTextBody(TextFormat.Html) ?? "";
+            if (message == null)
+            {
+                ShowHtml("");
+                return;
+            }
 
-            // 一時フォルダ
-            string tempDir = Path.Combine(Path.GetTempPath(), "MizuMailInline");
-            Directory.CreateDirectory(tempDir);
+            // ================================
+            // ★ HTML を安全に取得（最重要）
+            // ================================
+            string html =
+                message.GetTextBody(MimeKit.Text.TextFormat.Html)
+                ?? message.GetTextBody(MimeKit.Text.TextFormat.Plain)
+                ?? "";
+
+            // HTML が空なら空表示
+            if (string.IsNullOrWhiteSpace(html))
+            {
+                ShowHtml("");
+                return;
+            }
+
+            // ================================
+            // ★ inline 画像の抽出
+            // ================================
+            IEnumerable<MimePart> GetAllParts(MimeEntity entity)
+            {
+                if (entity is MimePart p)
+                    yield return p;
+
+                if (entity is Multipart mp)
+                {
+                    foreach (var child in mp)
+                        foreach (var c in GetAllParts(child))
+                            yield return c;
+                }
+            }
 
             var inlineImages = new Dictionary<string, string>();
 
-            // ★ inline 画像抽出
-            foreach (var part in message.BodyParts.OfType<MimePart>())
+            foreach (var part in GetAllParts(message.Body))
             {
                 if (part.ContentId != null &&
                     part.ContentType.MediaType.Equals("image", StringComparison.OrdinalIgnoreCase))
                 {
                     string cid = part.ContentId.Trim('<', '>');
 
-                    string ext = GetExtension(part);
-                    string tempPath = Path.Combine(tempDir, cid + ext);
+                    using (var ms = new MemoryStream())
+                    {
+                        part.Content.DecodeTo(ms);
+                        var bytes = ms.ToArray();
+                        string base64 = Convert.ToBase64String(bytes);
 
-                    using (var stream = File.Create(tempPath))
-                        part.Content.DecodeTo(stream);
+                        string mime = part.ContentType.MimeType; // 例: image/jpeg
+                        string dataUri = $"data:{mime};base64,{base64}";
 
-                    inlineImages[cid] = tempPath;
+                        inlineImages[cid] = dataUri;
+                    }
                 }
             }
 
-            // ★ HTML 内の cid を置換
+            // ================================
+            // ★ cid:xxx → data URI に置換
+            // ================================
             foreach (var kv in inlineImages)
             {
-                string cid = kv.Key;
-                string path = kv.Value.Replace("\\", "/");
-
-                html = html.Replace($"cid:{cid}", $"file:///{path}");
+                html = html.Replace("cid:" + kv.Key, kv.Value);
             }
 
-            // ★ WebView2 に表示
+            // ================================
+            // ★ UI を固めないための遅延（重要）
+            // ================================
+            await Task.Yield(); // UI に Visible 切り替えを反映させる
+
             ShowHtml(html);
         }
 
         private string GetExtension(MimePart part)
         {
-            // 1. FileName があればそこから取る（最も正確）
+            // 1. FileName があればそこから
             if (!string.IsNullOrEmpty(part.FileName))
                 return Path.GetExtension(part.FileName);
 
-            // 2. Content-Type から推測する
-            string mime = part.ContentType.MimeType;  // 例: "image/png"
+            // 2. Content-Type から推測
+            string mime = part.ContentType.MimeType.ToLower();
 
-            switch (mime.ToLower())
+            return mime switch
             {
-                case "image/jpeg": return ".jpg";
-                case "image/jpg": return ".jpg";
-                case "image/png": return ".png";
-                case "image/gif": return ".gif";
-                case "image/bmp": return ".bmp";
-                case "image/webp": return ".webp";
-                case "image/svg+xml": return ".svg";
-            }
-
-            // 3. 不明ならデフォルト
-            return ".bin";
+                "image/jpeg" => ".jpg",
+                "image/jpg" => ".jpg",
+                "image/png" => ".png",
+                "image/gif" => ".gif",
+                "image/bmp" => ".bmp",
+                "image/webp" => ".webp",
+                "image/svg+xml" => ".svg",
+                _ => ".bin"
+            };
         }
 
         string FixBrokenHtml(string html)
@@ -4857,6 +5030,10 @@ namespace MizuMail
                 return;
             }
 
+            richTextBody.Visible = true;
+            richTextBody.BackColor = SystemColors.Window;   // ★ これが決定打
+            richTextBody.ForeColor = SystemColors.WindowText;
+
             var msg = mail.message;
 
             StringBuilder sb = new StringBuilder();
@@ -4869,10 +5046,15 @@ namespace MizuMail
 
             browserMail.Visible = false;
             richTextBody.Text = sb.ToString();
+            richTextBody.BringToFront();
         }
 
         private void ShowNormalView(Mail mail)
         {
+            browserMail.Visible = true;
+            richTextBody.Clear();
+            browserMail.BringToFront();
+
             if (mail == null || mail.message == null)
             {
                 richTextBody.Clear();
@@ -4895,8 +5077,9 @@ namespace MizuMail
 
                 browserMail.Visible = true;
                 richTextBody.Visible = false;
+                browserMail.BringToFront();
 
-                ShowHtmlWithInlineImages(mail.message);
+                ShowHtmlWithInlineImages(mail.message, mail);
             }
             else
             {
@@ -4912,6 +5095,7 @@ namespace MizuMail
 
                 browserMail.Visible = false;
                 richTextBody.Visible = true;
+                richTextBody.BringToFront();
 
                 richTextBody.Text = text;
             }
@@ -5012,5 +5196,33 @@ namespace MizuMail
             }
         }
 
+        private string BuildPreview(string htmlOrText, bool isHtml)
+        {
+            string text = htmlOrText ?? "";
+
+            if (isHtml)
+            {
+                // 1. 改行タグを先に置換
+                text = Regex.Replace(text, @"<(br|BR)\s*/?>", "\n");
+                text = Regex.Replace(text, @"</p>", "\n");
+
+                // 2. タグ除去
+                text = Regex.Replace(text, "<.*?>", "");
+
+                // 3. HTML エンティティの簡易デコード
+                text = WebUtility.HtmlDecode(text);
+            }
+
+            // 4. 改行・空白整形
+            text = text.Replace("\r", "")
+                       .Replace("\n", " ")
+                       .Replace("\t", " ");
+
+            // 5. 連続スペースを 1 個に
+            text = Regex.Replace(text, @"\s{2,}", " ");
+
+            // 6. トリム
+            return text.Trim();
+        }
     }
 }

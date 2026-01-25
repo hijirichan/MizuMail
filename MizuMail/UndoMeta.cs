@@ -10,6 +10,7 @@ namespace MizuMail
     {
         public string OldPath { get; set; }
         public string NewPath { get; set; }
-        public string OldFolder { get; set; }
+        public FolderType OldFolder { get; set; }
+        public string OldFolderPath { get; set; }
     }
 }

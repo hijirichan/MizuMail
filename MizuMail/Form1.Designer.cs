@@ -31,17 +31,17 @@ namespace MizuMail
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
-            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
-            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
-            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("下書き");
-            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
-            treeNode1,
-            treeNode2,
-            treeNode3,
-            treeNode4,
-            treeNode5});
+            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
+            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
+            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
+            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode11 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
+            System.Windows.Forms.TreeNode treeNode12 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            treeNode7,
+            treeNode8,
+            treeNode9,
+            treeNode10,
+            treeNode11});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -609,27 +609,27 @@ namespace MizuMail
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
-            treeNode1.ImageIndex = 1;
-            treeNode1.Name = "nodeReceive";
-            treeNode1.SelectedImageIndex = 1;
-            treeNode1.Text = "受信メール(0)";
-            treeNode2.Name = "nodeSpam";
-            treeNode2.Text = "迷惑メール(0)";
-            treeNode3.ImageIndex = 2;
-            treeNode3.Name = "nodeSend";
-            treeNode3.SelectedImageIndex = 2;
-            treeNode3.Text = "送信メール(0)";
-            treeNode4.ImageIndex = 3;
-            treeNode4.Name = "nodeDraft";
-            treeNode4.Text = "下書き";
-            treeNode5.ImageIndex = 4;
-            treeNode5.Name = "nodeDelete";
-            treeNode5.Text = "ごみ箱(0)";
-            treeNode6.ImageIndex = 0;
-            treeNode6.Name = "rootMail";
-            treeNode6.Text = "メール";
+            treeNode7.ImageIndex = 1;
+            treeNode7.Name = "nodeReceive";
+            treeNode7.SelectedImageIndex = 1;
+            treeNode7.Text = "受信メール(0)";
+            treeNode8.Name = "nodeSpam";
+            treeNode8.Text = "迷惑メール(0)";
+            treeNode9.ImageIndex = 2;
+            treeNode9.Name = "nodeSend";
+            treeNode9.SelectedImageIndex = 2;
+            treeNode9.Text = "送信メール(0)";
+            treeNode10.ImageIndex = 3;
+            treeNode10.Name = "nodeDraft";
+            treeNode10.Text = "下書き";
+            treeNode11.ImageIndex = 4;
+            treeNode11.Name = "nodeDelete";
+            treeNode11.Text = "ごみ箱(0)";
+            treeNode12.ImageIndex = 0;
+            treeNode12.Name = "rootMail";
+            treeNode12.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode6});
+            treeNode12});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
