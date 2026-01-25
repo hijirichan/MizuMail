@@ -3848,6 +3848,11 @@ namespace MizuMail
         private void MoveMailWithUndo(Mail mail, MailFolder newFolder)
         {
             string oldPath = ResolveMailPath(mail);
+
+            // ★ 残像対策（1回でOK）
+            if (mailCache.ContainsKey(oldPath))
+                mailCache.Remove(oldPath);
+
             FolderType oldFolderType = mail.Folder.Type;
             string oldFolderPath = mail.Folder.FullPath;
             string oldName = mail.mailName;
@@ -3883,22 +3888,20 @@ namespace MizuMail
             if (File.Exists(oldPath))
                 File.Move(oldPath, newPath);
 
-            // ★ mailCache 更新
-            if (mailCache.ContainsKey(oldPath))
-                mailCache.Remove(oldPath);
-
+            // ★ mailCache 更新（ここでは oldPath はもう存在しないので Remove 不要）
             mail.mailPath = newPath;
             mail.Folder = newFolder;
             mailCache[newPath] = mail;
 
-            // ★ ごみ箱へ移動する場合だけ Undo 情報を JSON で保存（移動後に書く）
+            // ★ ごみ箱へ移動する場合だけ Undo 情報を JSON で保存
             if (newFolder.Type == FolderType.Trash)
             {
                 var meta = new UndoMeta
                 {
                     OldPath = oldPath,
                     NewPath = newPath,
-                    OldFolder = oldFolderType
+                    OldFolder = oldFolderType,
+                    OldFolderPath = oldFolderPath
                 };
 
                 string metaJson = JsonConvert.SerializeObject(meta, Formatting.Indented);
