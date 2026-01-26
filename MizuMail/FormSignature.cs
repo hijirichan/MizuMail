@@ -33,8 +33,7 @@ namespace MizuMail
 
         private void FormSignature_Load(object sender, EventArgs e)
         {
-            FormMain form = new FormMain();
-            signature = form.LoadSignature();
+            signature = FormMain.LoadSignature();
 
             if (signature == null)
             {

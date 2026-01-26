@@ -641,6 +641,9 @@ namespace MizuMail
                         // ★ Draft フォルダの一覧を更新
                         LoadEmlFolder(folderManager.Draft);
 
+                        // ★ 送信メールフォルダの一覧を更新
+                        LoadEmlFolder(folderManager.Send);
+
                         labelMessage.Text = "送信: " + mail.address;
                         statusStrip1.Refresh();
                     }
@@ -1044,6 +1047,9 @@ namespace MizuMail
                     mail.notReadYet = true;
                     mail.Folder = folderManager.Draft;
                     SaveMail(mail);
+
+                    // ★ Draft フォルダの一覧を更新
+                    LoadEmlFolder(folderManager.Draft);
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -1364,6 +1370,8 @@ namespace MizuMail
                     mail.notReadYet = true;
                     mail.Folder = folderManager.Draft;
                     SaveMail(mail);
+                    // ★ Draft フォルダの一覧を更新
+                    LoadEmlFolder(folderManager.Draft);
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -3102,6 +3110,8 @@ namespace MizuMail
                             Folder = folderManager.Draft
                         };
                         SaveMail(draft);
+                        // ★ Draft フォルダの一覧を更新
+                        LoadEmlFolder(folderManager.Draft);
                     }
                     else
                     {
@@ -3115,6 +3125,8 @@ namespace MizuMail
                         mail.notReadYet = true;
                         mail.Folder = folderManager.Draft;
                         SaveMail(mail);
+                        // ★ Draft フォルダの一覧を更新
+                        LoadEmlFolder(folderManager.Draft);
                     }
                 }
             }
@@ -4992,7 +5004,7 @@ namespace MizuMail
             File.WriteAllText(path, json, Encoding.UTF8);
         }
 
-        public SignatureConfig LoadSignature()
+        public static SignatureConfig LoadSignature()
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "signature.json");
 

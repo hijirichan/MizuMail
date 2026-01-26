@@ -279,36 +279,6 @@ namespace MizuMail
             EnsureAttachButtonVisible();
         }
 
-        /// <summary>
-        /// フォーム終了時に Application.Idle の登録を解除
-        /// </summary>
-        protected override void OnFormClosed(FormClosedEventArgs e)
-        {
-            var isEdit = (!string.IsNullOrWhiteSpace(textMailTo.Text) || !string.IsNullOrWhiteSpace(textMailSubject.Text) || !string.IsNullOrWhiteSpace(textMailBody.Text) || buttonAttachList?.DropDownItems?.Count > 0);
-            // 送信フラグがfalseかつ宛先、件名、本文、添付ファイルが1件以上のいずれかが入力されている状態で閉じる場合、確認ダイアログを表示する
-            if (senderEmail == false && isEdit)
-            {
-                var result = MessageBox.Show("編集中の内容が失われます。本当に閉じますか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (result != DialogResult.Yes)
-                {
-                    // 閉じるのをキャンセル
-                    this.DialogResult = DialogResult.None;
-                    return;
-                }
-            }
-
-            try
-            {
-                System.Windows.Forms.Application.Idle -= OnApplicationIdle;
-            }
-            catch
-            {
-                // 無視
-            }
-
-            base.OnFormClosed(e);
-        }
-
         private void toolAddAttachment_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
@@ -610,8 +580,7 @@ namespace MizuMail
 
         private void menuInsertSignature_Click(object sender, EventArgs e)
         {
-            FormMain form = new FormMain();
-            var sig = form.LoadSignature();
+            var sig = FormMain.LoadSignature();
 
             if (sig.Enabled && !string.IsNullOrWhiteSpace(sig.Signature))
             {
@@ -622,6 +591,35 @@ namespace MizuMail
         private void menuInsertAttachment_Click(object sender, EventArgs e)
         {
             toolAddAttachment_Click(sender, e);
+        }
+
+        /// <summary>
+        /// フォーム終了時に Application.Idle の登録を解除
+        /// </summary>
+        private void FormMailCreate_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            var isEdit = (!string.IsNullOrWhiteSpace(textMailTo.Text) || !string.IsNullOrWhiteSpace(textMailSubject.Text) || !string.IsNullOrWhiteSpace(textMailBody.Text) || buttonAttachList?.DropDownItems?.Count > 0);
+            // 送信フラグがfalseかつ宛先、件名、本文、添付ファイルが1件以上のいずれかが入力されている状態で閉じる場合、確認ダイアログを表示する
+            if (senderEmail == false && isEdit)
+            {
+                var result = MessageBox.Show("編集中の内容が失われます。本当に閉じますか？", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result != DialogResult.Yes)
+                {
+                    // 閉じるのをキャンセル
+                    this.DialogResult = DialogResult.None;
+                    e.Cancel = true;
+                    return;
+                }
+            }
+
+            try
+            {
+                System.Windows.Forms.Application.Idle -= OnApplicationIdle;
+            }
+            catch
+            {
+                // 無視
+            }
         }
     }
 }
