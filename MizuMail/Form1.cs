@@ -67,6 +67,8 @@ namespace MizuMail
         private DateTime updateListViewStart = DateTime.MinValue;
         HashSet<MailFolder> updatedFolders = new HashSet<MailFolder>();
         private Dictionary<MailFolder, TreeNode> folderNodeMap = new Dictionary<MailFolder, TreeNode>();
+        private Stack<TagUndoAction> tagUndoStack = new Stack<TagUndoAction>();
+        private Stack<TagUndoAction> tagRedoStack = new Stack<TagUndoAction>();
 
         // ★ メールルール
         private List<MailRule> rules = new List<MailRule>();
@@ -94,7 +96,7 @@ namespace MizuMail
                 {
                     Column = 3,
                     Order = SortOrder.Descending,
-                    ColumnModes = new[] { ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.DateTime, ComparerMode.String, ComparerMode.String }
+                    ColumnModes = new[] { ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.DateTime, ComparerMode.String, ComparerMode.String, ComparerMode.String }
                 };
             }
 
@@ -457,6 +459,7 @@ namespace MizuMail
                     item.SubItems.Add(displayDate);
                     item.SubItems.Add(FormatSize(mail.sizeBytes));
                     item.SubItems.Add(previewText);
+                    item.SubItems.Add(string.Join(", ", mail.Labels));
                     item.SubItems.Add(mail.mailName);
 
                     bool isDraftMail = (mail.Folder.Type == FolderType.Draft && mail.isDraft);
@@ -541,7 +544,8 @@ namespace MizuMail
                         break;
                 }
                 listMain.Columns[5].Text = "プレビュー";
-                listMain.Columns[6].Text = "メールファイル名";
+                listMain.Columns[6].Text = "タグ";
+                listMain.Columns[7].Text = "メールファイル名";
             }
 
             // ★ 選択されたフォルダをローカル変数に固定
@@ -814,6 +818,7 @@ namespace MizuMail
             Properties.Settings.Default.ColWidth4 = listMain.Columns[4].Width;
             Properties.Settings.Default.ColWidth5 = listMain.Columns[5].Width;
             Properties.Settings.Default.ColWidth6 = listMain.Columns[6].Width;
+            Properties.Settings.Default.ColWidth7 = listMain.Columns[7].Width;
             Properties.Settings.Default.Save();
 
             SaveUidls();
@@ -887,8 +892,8 @@ namespace MizuMail
 
         private void RestoreColumnWidths()
         {
-            int[] defaults = { 24, 150, 200, 150, 120, 200, 0 }; // 好みで調整可能
-            int[] widths = new int[7];
+            int[] defaults = { 24, 150, 200, 150, 120, 200, 120, 0 }; // 好みで調整可能
+            int[] widths = new int[8];
 
             object[] settings =
             {
@@ -898,10 +903,11 @@ namespace MizuMail
                 Properties.Settings.Default.ColWidth3,
                 Properties.Settings.Default.ColWidth4,
                 Properties.Settings.Default.ColWidth5,
-                Properties.Settings.Default.ColWidth6
+                Properties.Settings.Default.ColWidth6,
+                Properties.Settings.Default.ColWidth7
             };
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 8; i++)
             {
                 int w;
 
@@ -926,7 +932,7 @@ namespace MizuMail
             }
 
             // ListView に反映
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < 8; i++)
             {
                 if (i < listMain.Columns.Count)
                     listMain.Columns[i].Width = widths[i];
@@ -1286,6 +1292,7 @@ namespace MizuMail
             menuMailDelete.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
             menuMailReply.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
             toolShowHeader.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
+            menuEditTags.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
 
             // ★ Trash フォルダがまだ初期化されていない場合は何もしない
             if (folderManager?.Trash == null || folderManager.Trash.FullPath == null)
@@ -1313,6 +1320,9 @@ namespace MizuMail
 
             menuSaveAs.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
             menuSpeechMail.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
+            menuAddToAddressBook.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
+            menuUndoTags.Enabled = listMain.SelectedItems.Count == 1 && tagUndoStack.Count > 0;
+            menuRedoTags.Enabled = listMain.SelectedItems.Count == 1 && tagRedoStack.Count > 0;
             menuAttachmentFileAllSave.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false && buttonAtachMenu.DropDownItems.Count > 0;
             UpdateUndoState();
         }
@@ -2089,7 +2099,7 @@ namespace MizuMail
 
                 string previewText = FitTextToColumn(mail.preview, listMain.Columns[5].Width, baseFont);
                 item.SubItems.Add(previewText);
-
+                item.SubItems.Add(string.Join(", ", mail.Labels));
                 item.SubItems.Add(mail.mailName);
 
                 if (HasAttachment(mail))
@@ -2820,6 +2830,21 @@ namespace MizuMail
                     mail.isHtml = message.GetTextBody(MimeKit.Text.TextFormat.Html) != null;
                     mail.preview = BuildPreview(mail.body, mail.isHtml);
 
+                    // ★ タグ読み込み
+                    var labels = message.Headers["X-MizuMail-Labels"];
+                    if (!string.IsNullOrEmpty(labels))
+                    {
+                        mail.Labels = labels
+                            .Split(',')
+                            .Select(t => t.Trim())
+                            .Where(t => t.Length > 0)
+                            .ToList();
+                    }
+                    else
+                    {
+                        mail.Labels = new List<string>();
+                    }
+
                     LoadMailCache(mail);
 
                     list.Add(mail);
@@ -3210,7 +3235,8 @@ namespace MizuMail
                 listMain.Columns[3].Text = "更新日時";
                 listMain.Columns[4].Text = "サイズ";
                 listMain.Columns[5].Text = "";   // プレビュー列は使わない
-                listMain.Columns[6].Text = "";   // ファイル名列も使わない
+                listMain.Columns[6].Text = "";   // タグ列も使わない
+                listMain.Columns[7].Text = "";   // ファイル名列も使わない
 
                 // ★ 表示する情報を作成
                 var item = new ListViewItem(" ", 0); // アイコン列
@@ -3228,6 +3254,7 @@ namespace MizuMail
                 item.SubItems.Add(FormatSize(directorySize));
 
                 // 使わない列は空文字で埋める
+                item.SubItems.Add(""); // preview
                 item.SubItems.Add(""); // preview
                 item.SubItems.Add(""); // mailName
 
@@ -3969,6 +3996,36 @@ namespace MizuMail
             mail.notReadYet = path.EndsWith("_unread.eml");
 
             return mail;
+        }
+
+        public static void SaveMailLabels(Mail mail)
+        {
+            if (mail == null || string.IsNullOrEmpty(mail.mailPath))
+                return;
+
+            try
+            {
+                var msg = MimeMessage.Load(mail.mailPath);
+
+                // 既存のタグヘッダを削除
+                msg.Headers.Remove("X-MizuMail-Labels");
+
+                // タグが残っている場合だけ書き込む
+                if (mail.Labels != null && mail.Labels.Count > 0)
+                {
+                    msg.Headers.Add("X-MizuMail-Labels", string.Join(", ", mail.Labels));
+                }
+
+                // 上書き保存
+                using (var stream = File.Create(mail.mailPath))
+                {
+                    msg.WriteTo(stream);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"タグ保存中にエラー: {ex}");
+            }
         }
 
         private void SaveRules()
@@ -5250,6 +5307,53 @@ namespace MizuMail
 
             // 6. トリム
             return text.Trim();
+        }
+
+        private void menuEditTags_Click(object sender, EventArgs e)
+        {
+            if (currentMail == null) return;
+
+            using (var dlg = new FormTagEditor(currentMail.Labels))
+            {
+                if (dlg.ShowDialog() == DialogResult.OK)
+                {
+                    var action = new TagUndoAction
+                    {
+                        Mail = currentMail,
+                        OldLabels = new List<string>(currentMail.Labels),
+                        NewLabels = new List<string>(dlg.ResultTags)
+                    };
+
+                    tagUndoStack.Push(action);
+                    tagRedoStack.Clear(); // Redo は無効化
+
+                    currentMail.Labels = dlg.ResultTags;
+                    SaveMailLabels(currentMail);
+                    UpdateListView();
+                }
+            }
+        }
+
+        private void menuUndoTags_Click(object sender, EventArgs e)
+        {
+            if (tagUndoStack.Count == 0) return;
+
+            var action = tagUndoStack.Pop();
+            action.Undo();
+            tagRedoStack.Push(action);
+
+            UpdateListView();
+        }
+
+        private void menuRedoTags_Click(object sender, EventArgs e)
+        {
+            if (tagRedoStack.Count == 0) return;
+
+            var action = tagRedoStack.Pop();
+            action.Redo();
+            tagUndoStack.Push(action);
+
+            UpdateListView();
         }
     }
 }

@@ -158,6 +158,12 @@
     <Compile Include="FormSignature.Designer.cs">
       <DependentUpon>FormSignature.cs</DependentUpon>
     </Compile>
+    <Compile Include="FormTagEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormTagEditor.Designer.cs">
+      <DependentUpon>FormTagEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="MailRule.cs" />
     <Compile Include="Prompt.cs" />
     <Compile Include="FindDialog.cs">
@@ -195,6 +201,7 @@
       <DependentUpon>ReplaceDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="SignatureConfig.cs" />
+    <Compile Include="TagUndoAction.cs" />
     <Compile Include="UndoMeta.cs" />
     <EmbeddedResource Include="AboutForm.resx">
       <DependentUpon>AboutForm.cs</DependentUpon>
@@ -226,6 +233,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="FormSignature.resx">
       <DependentUpon>FormSignature.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormTagEditor.resx">
+      <DependentUpon>FormTagEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

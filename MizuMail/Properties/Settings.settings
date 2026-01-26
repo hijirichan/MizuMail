@@ -21,6 +21,9 @@
       <Value Profile="(Default)">200</Value>
     </Setting>
     <Setting Name="ColWidth6" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">120</Value>
+    </Setting>
+    <Setting Name="ColWidth7" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>

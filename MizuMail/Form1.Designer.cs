@@ -31,17 +31,17 @@ namespace MizuMail
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
-            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
-            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
-            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("下書き");
-            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
-            treeNode1,
-            treeNode2,
-            treeNode3,
-            treeNode4,
-            treeNode5});
+            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
+            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
+            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
+            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode11 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
+            System.Windows.Forms.TreeNode treeNode12 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            treeNode7,
+            treeNode8,
+            treeNode9,
+            treeNode10,
+            treeNode11});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -109,9 +109,9 @@ namespace MizuMail
             this.columnDate = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnPreview = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnTag = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnMailName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.menuDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.menuUndoMail = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem6 = new System.Windows.Forms.ToolStripSeparator();
             this.menuNotReadYet = new System.Windows.Forms.ToolStripMenuItem();
@@ -120,10 +120,16 @@ namespace MizuMail
             this.menuSpeechMail = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.menuAddToAddressBook = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem10 = new System.Windows.Forms.ToolStripSeparator();
+            this.menuEditTags = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.browserMail = new Microsoft.Web.WebView2.WinForms.WebView2();
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
+            this.menuUndoTags = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuRedoTags = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -609,27 +615,27 @@ namespace MizuMail
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
-            treeNode1.ImageIndex = 1;
-            treeNode1.Name = "nodeReceive";
-            treeNode1.SelectedImageIndex = 1;
-            treeNode1.Text = "受信メール(0)";
-            treeNode2.Name = "nodeSpam";
-            treeNode2.Text = "迷惑メール(0)";
-            treeNode3.ImageIndex = 2;
-            treeNode3.Name = "nodeSend";
-            treeNode3.SelectedImageIndex = 2;
-            treeNode3.Text = "送信メール(0)";
-            treeNode4.ImageIndex = 3;
-            treeNode4.Name = "nodeDraft";
-            treeNode4.Text = "下書き";
-            treeNode5.ImageIndex = 4;
-            treeNode5.Name = "nodeDelete";
-            treeNode5.Text = "ごみ箱(0)";
-            treeNode6.ImageIndex = 0;
-            treeNode6.Name = "rootMail";
-            treeNode6.Text = "メール";
+            treeNode7.ImageIndex = 1;
+            treeNode7.Name = "nodeReceive";
+            treeNode7.SelectedImageIndex = 1;
+            treeNode7.Text = "受信メール(0)";
+            treeNode8.Name = "nodeSpam";
+            treeNode8.Text = "迷惑メール(0)";
+            treeNode9.ImageIndex = 2;
+            treeNode9.Name = "nodeSend";
+            treeNode9.SelectedImageIndex = 2;
+            treeNode9.Text = "送信メール(0)";
+            treeNode10.ImageIndex = 3;
+            treeNode10.Name = "nodeDraft";
+            treeNode10.Text = "下書き";
+            treeNode11.ImageIndex = 4;
+            treeNode11.Name = "nodeDelete";
+            treeNode11.Text = "ごみ箱(0)";
+            treeNode12.ImageIndex = 0;
+            treeNode12.Name = "rootMail";
+            treeNode12.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode6});
+            treeNode12});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
@@ -724,6 +730,7 @@ namespace MizuMail
             this.columnDate,
             this.columnSize,
             this.columnPreview,
+            this.columnTag,
             this.columnMailName});
             this.listMain.ContextMenuStrip = this.contextMenuStrip1;
             this.listMain.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -772,10 +779,15 @@ namespace MizuMail
             this.columnPreview.Text = "プレビュー";
             this.columnPreview.Width = 100;
             // 
+            // columnTag
+            // 
+            this.columnTag.Text = "タグ";
+            this.columnTag.Width = 120;
+            // 
             // columnMailName
             // 
             this.columnMailName.Text = "メールファイル名";
-            this.columnMailName.Width = 111;
+            this.columnMailName.Width = 0;
             // 
             // contextMenuStrip1
             // 
@@ -789,16 +801,14 @@ namespace MizuMail
             this.toolStripSeparator5,
             this.menuSpeechMail,
             this.toolStripMenuItem9,
-            this.menuAddToAddressBook});
+            this.menuAddToAddressBook,
+            this.toolStripMenuItem10,
+            this.menuEditTags,
+            this.toolStripSeparator7,
+            this.menuUndoTags,
+            this.menuRedoTags});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(249, 166);
-            // 
-            // menuDelete
-            // 
-            this.menuDelete.Name = "menuDelete";
-            this.menuDelete.Size = new System.Drawing.Size(248, 24);
-            this.menuDelete.Text = "削除(&D)";
-            this.menuDelete.Click += new System.EventHandler(this.menuDelete_Click);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(249, 278);
             // 
             // menuUndoMail
             // 
@@ -850,6 +860,25 @@ namespace MizuMail
             this.menuAddToAddressBook.Text = "この人をアドレス帳に追加(&A)";
             this.menuAddToAddressBook.Click += new System.EventHandler(this.menuAddToAddressBook_Click);
             // 
+            // toolStripMenuItem10
+            // 
+            this.toolStripMenuItem10.Name = "toolStripMenuItem10";
+            this.toolStripMenuItem10.Size = new System.Drawing.Size(245, 6);
+            // 
+            // menuEditTags
+            // 
+            this.menuEditTags.Name = "menuEditTags";
+            this.menuEditTags.Size = new System.Drawing.Size(248, 24);
+            this.menuEditTags.Text = "タグの編集(&T)";
+            this.menuEditTags.Click += new System.EventHandler(this.menuEditTags_Click);
+            // 
+            // menuDelete
+            // 
+            this.menuDelete.Name = "menuDelete";
+            this.menuDelete.Size = new System.Drawing.Size(248, 24);
+            this.menuDelete.Text = "削除(&D)";
+            this.menuDelete.Click += new System.EventHandler(this.menuDelete_Click);
+            // 
             // browserMail
             // 
             this.browserMail.AllowExternalDrop = true;
@@ -883,6 +912,25 @@ namespace MizuMail
             // timerAutoReceive
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
+            // 
+            // menuUndoTags
+            // 
+            this.menuUndoTags.Name = "menuUndoTags";
+            this.menuUndoTags.Size = new System.Drawing.Size(248, 24);
+            this.menuUndoTags.Text = "タグのUndo";
+            this.menuUndoTags.Click += new System.EventHandler(this.menuUndoTags_Click);
+            // 
+            // menuRedoTags
+            // 
+            this.menuRedoTags.Name = "menuRedoTags";
+            this.menuRedoTags.Size = new System.Drawing.Size(248, 24);
+            this.menuRedoTags.Text = "タグのRedo";
+            this.menuRedoTags.Click += new System.EventHandler(this.menuRedoTags_Click);
+            // 
+            // toolStripSeparator7
+            // 
+            this.toolStripSeparator7.Name = "toolStripSeparator7";
+            this.toolStripSeparator7.Size = new System.Drawing.Size(245, 6);
             // 
             // FormMain
             // 
@@ -943,7 +991,6 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem 設定SToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem menuAccountSetting;
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem menuDelete;
         private System.Windows.Forms.ToolStripMenuItem menuNotReadYet;
         private System.Windows.Forms.ToolStripStatusLabel labelDate;
         private System.Windows.Forms.Timer timerMain;
@@ -1005,6 +1052,13 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
         private System.Windows.Forms.ColumnHeader columnPreview;
         private System.Windows.Forms.ColumnHeader columnIcon;
+        private System.Windows.Forms.ColumnHeader columnTag;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem10;
+        private System.Windows.Forms.ToolStripMenuItem menuEditTags;
+        private System.Windows.Forms.ToolStripMenuItem menuDelete;
+        private System.Windows.Forms.ToolStripMenuItem menuUndoTags;
+        private System.Windows.Forms.ToolStripMenuItem menuRedoTags;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
     }
 }
 

@@ -55,6 +55,7 @@ namespace MizuMail
         public bool isHtml;                     // 本文がHTML形式かどうか
         public long sizeBytes;                  // ファイルサイズ（バイト）
         public string preview;                  // プレビュー用の1行テキスト
+        public List<string> Labels { get; set; } = new List<string>();  // ラベルリスト
 
         // コンストラクタ
         public Mail()

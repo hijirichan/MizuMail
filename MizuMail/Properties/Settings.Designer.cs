@@ -97,13 +97,25 @@ namespace MizuMail.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.Configuration.DefaultSettingValueAttribute("120")]
         public int ColWidth6 {
             get {
                 return ((int)(this["ColWidth6"]));
             }
             set {
                 this["ColWidth6"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ColWidth7 {
+            get {
+                return ((int)(this["ColWidth7"]));
+            }
+            set {
+                this["ColWidth7"] = value;
             }
         }
     }
