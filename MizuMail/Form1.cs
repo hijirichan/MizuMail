@@ -69,6 +69,9 @@ namespace MizuMail
         private Dictionary<MailFolder, TreeNode> folderNodeMap = new Dictionary<MailFolder, TreeNode>();
         private Stack<TagUndoAction> tagUndoStack = new Stack<TagUndoAction>();
         private Stack<TagUndoAction> tagRedoStack = new Stack<TagUndoAction>();
+        // ★ 事前に1回だけ作る（FormMain のフィールド）
+        private readonly Font boldFont;
+        private readonly Font normalFont;
 
         // ★ メールルール
         private List<MailRule> rules = new List<MailRule>();
@@ -96,7 +99,7 @@ namespace MizuMail
                 {
                     Column = 3,
                     Order = SortOrder.Descending,
-                    ColumnModes = new[] { ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.DateTime, ComparerMode.String, ComparerMode.String, ComparerMode.String }
+                    ColumnModes = new[] { ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.DateTime, ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.String }
                 };
             }
 
@@ -118,21 +121,8 @@ namespace MizuMail
             /// </summary>
             public int Column
             {
-                set
-                {
-                    if (_column == value)
-                    {
-                        if (Order == SortOrder.Ascending)
-                            Order = SortOrder.Descending;
-                        else if (Order == SortOrder.Descending)
-                            Order = SortOrder.Ascending;
-                    }
-                    _column = value;
-                }
-                get
-                {
-                    return _column;
-                }
+                get { return _column; }
+                set { _column = value; }
             }
 
             /// <summary>
@@ -252,12 +242,13 @@ namespace MizuMail
 
             InitializeComponent();
 
+            normalFont = listMain.Font;
+            boldFont = new Font(listMain.Font, FontStyle.Bold);
+
             // 初期化
             currentMail = null;
 
             System.Windows.Forms.Application.Idle += Application_Idle;
-
-            listMain.ColumnClick += listMain_ColumnClick;
             listMain.SmallImageList = new ImageList { ImageSize = new Size(1, 20) };
             listViewItemSorter = ListViewItemComparer.Default;
             listMain.ListViewItemSorter = listViewItemSorter;
@@ -284,24 +275,31 @@ namespace MizuMail
         /// <returns></returns>
         private static bool TryParseListViewDate(string text, out DateTime dt)
         {
-            dt = DateTime.MinValue;
-
-            if (string.IsNullOrEmpty(text) || text == "未送信")
-                return false;
-
-            // FormatReceivedDate で "yyyy/MM/dd HH:mm:ss" にしている前提
-            if (DateTime.TryParseExact(
-                    text,
-                    "yyyy/MM/dd HH:mm:ss",
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    System.Globalization.DateTimeStyles.None,
-                    out dt))
+            if (string.IsNullOrWhiteSpace(text))
             {
-                return true;
+                dt = default;
+                return false;
             }
 
-            // 念のための保険: 通常の TryParse も試す
-            return DateTime.TryParse(text, out dt);
+            // 日本語ロケール（曜日：月, 火, 水, 木, 金, 土, 日）
+            var jp = new System.Globalization.CultureInfo("ja-JP");
+
+            string[] formats = new[]
+            {
+                "yyyy/MM/dd (ddd) HH:mm:ss",
+                "yyyy/MM/dd (ddd) HH:mm",
+                "yyyy/MM/dd HH:mm:ss",
+                "yyyy/MM/dd HH:mm",
+                "yyyy/MM/dd"
+            };
+
+            return DateTime.TryParseExact(
+                text.Trim(),
+                formats,
+                jp,   // ← ここが超重要
+                System.Globalization.DateTimeStyles.None,
+                out dt
+            );
         }
 
         /// <summary>
@@ -309,10 +307,18 @@ namespace MizuMail
         /// </summary>
         private void UpdateView()
         {
+            logger.Debug($"[UpdateView] 呼び出し元: {Environment.StackTrace}");
+            logger.Debug($"UpdateListView: mailCache.Count={mailCache.Count}");
+
             listMain.ListViewItemSorter = null;
 
             UpdateTreeView();
-            UpdateListView();
+
+            // ★ UpdateListView を遅延実行（描画タイミングをずらす）
+            this.BeginInvoke((MethodInvoker)(() =>
+            {
+                UpdateListView();
+            }));
 
             listMain.ListViewItemSorter = listViewItemSorter;
 
@@ -371,62 +377,87 @@ namespace MizuMail
 
             isUpdatingList = true;
 
-            updateListViewCount++;
-            logger.Debug($"[UpdateListView] 呼び出し {updateListViewCount} 回目  時刻: {DateTime.Now:HH:mm:ss.fff}");
-
             var prevSorter = listMain.ListViewItemSorter;
             listMain.ListViewItemSorter = null;
 
-            listMain.BeginUpdate();
-            try
-            {
-                // ★ 選択ノード取得
-                TreeNode node = treeMain.SelectedNode;
-                MailFolder folder = node?.Tag as MailFolder;
+            updateListViewCount++;
+            logger.Debug($"[UpdateListView] 呼び出し {updateListViewCount} 回目  時刻: {DateTime.Now:HH:mm:ss.fff}");
 
-                // ★ フォルダが null → メールボックス一覧表示
-                if (folder == null)
+            TreeNode node = treeMain.SelectedNode;
+            MailFolder folder = node?.Tag as MailFolder;
+
+            // ★ メールボックス一覧
+            if (folder == null)
+            {
+                listMain.BeginUpdate();
+                try
                 {
                     ShowMailboxInfo();
-                    logger.Debug("[UpdateListView] Mailbox view");
-                    return;
                 }
-
-                // ★ このフォルダのメールだけ抽出
-                IEnumerable<Mail> displayList = mailCache.Values
-                    .Where(m => m != null && m.Folder != null)
-                    .Where(m => string.Equals(
-                        m.Folder.FullPath,
-                        folder.FullPath,
-                        StringComparison.OrdinalIgnoreCase));
-
-                logger.Debug($"UpdateListView: folder={folder.FullPath}, displayCount={displayList.Count()}");
-
-                // ★ 検索キーワードフィルタ
-                if (!string.IsNullOrEmpty(currentKeyword))
+                finally
                 {
-                    string kw = currentKeyword;
-                    displayList = displayList.Where(m =>
+                    listMain.EndUpdate();
+                    listMain.ListViewItemSorter = prevSorter;
+                    isUpdatingList = false;
+                }
+                return;
+            }
+
+            // ★ displayList を高速抽出
+            var displayList = new List<Mail>();
+            foreach (var m in mailCache.Values)
+            {
+                if (m != null && m.Folder != null &&
+                    m.Folder.FullPath == folder.FullPath)
+                {
+                    displayList.Add(m);
+                }
+            }
+
+            logger.Debug($"UpdateListView: folder={folder.FullPath}, displayCount={displayList.Count}");
+
+            // ★ キーワードフィルタ
+            if (!string.IsNullOrEmpty(currentKeyword))
+            {
+                string kw = currentKeyword;
+                displayList = displayList
+                    .Where(m =>
                         (m.subject?.Contains(kw) ?? false) ||
                         (m.body?.Contains(kw) ?? false) ||
-                        (m.address?.Contains(kw) ?? false));
-                }
+                        (m.address?.Contains(kw) ?? false))
+                    .ToList();
+            }
 
-                // ★ フィルタコンボ
-                string filter = toolFilterCombo.SelectedItem?.ToString();
-                if (filter == "未読")
-                    displayList = displayList.Where(m => m.notReadYet);
-                else if (filter == "添付あり")
-                    displayList = displayList.Where(m => m.hasAtach);
-                else if (filter == "今日")
-                    displayList = displayList.Where(m =>
-                    {
-                        if (DateTime.TryParse(m.date, out DateTime dt))
-                            return dt.Date == DateTime.Now.Date;
-                        return false;
-                    });
+            // ★ フィルタコンボ
+            string filter = toolFilterCombo.SelectedItem?.ToString();
+            if (filter == "未読")
+                displayList = displayList.Where(m => m.notReadYet).ToList();
+            else if (filter == "添付あり")
+                displayList = displayList.Where(m => m.hasAtach).ToList();
+            else if (filter == "今日")
+                displayList = displayList.Where(m =>
+                {
+                    if (DateTime.TryParse(m.date, out DateTime dt))
+                        return dt.Date == DateTime.Now.Date;
+                    return false;
+                }).ToList();
 
-                // ★ 描画準備
+            // ★ FitTextToColumn キャッシュ
+            var textCache = new Dictionary<string, string>();
+            string FitCached(string text, int width)
+            {
+                if (text == null) return "";
+                if (textCache.TryGetValue(text, out var cached))
+                    return cached;
+
+                var fitted = FitTextToColumn(text, width, normalFont);
+                textCache[text] = fitted;
+                return fitted;
+            }
+
+            try
+            {
+                listMain.BeginUpdate();
                 listMain.Items.Clear();
                 mailBoxViewFlag = false;
 
@@ -434,26 +465,45 @@ namespace MizuMail
                 int colSubjectWidth = listMain.Columns[2].Width;
                 int colPreviewWidth = listMain.Columns[5].Width;
 
-                var baseFont = listMain.Font;
-
-                // ★ 高速描画ループ
-                foreach (Mail mail in displayList)
+                foreach (var mail in displayList)
                 {
                     string col0 = (mail.Folder.Type == FolderType.Send || mail.Folder.Type == FolderType.Draft)
                         ? mail.address
                         : mail.from;
 
-                    string senderText = FitTextToColumn(col0, colSenderWidth, baseFont);
-                    string subjectText = FitTextToColumn(mail.subject, colSubjectWidth, baseFont);
-                    string previewText = FitTextToColumn(mail.preview, colPreviewWidth, baseFont);
+                    string senderText = FitCached(col0, colSenderWidth);
+                    string subjectText = FitCached(mail.subject, colSubjectWidth);
+
+                    // ★ preview を短くする（高速化）
+                    string previewShort = mail.preview.Length > 60
+                        ? mail.preview.Substring(0, 60)
+                        : mail.preview;
+
+                    string previewText = FitCached(previewShort, colPreviewWidth);
+
                     string displayDate = FormatReceivedDate(mail.date);
 
+                    // ★ 先にスタイルを設定する（重要）
                     var item = new ListViewItem(" ", 0)
                     {
                         ImageIndex = GetMailIconIndex(mail),
-                        Tag = mail
+                        Tag = mail,
+                        UseItemStyleForSubItems = true
                     };
 
+                    bool isDraftMail = (mail.Folder.Type == FolderType.Draft && mail.isDraft);
+
+                    if (mail.notReadYet || isDraftMail)
+                    {
+                        item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
+                        item.Font = boldFont;
+                    }
+                    else
+                    {
+                        item.Font = normalFont;
+                    }
+
+                    // ★ SubItems はスタイル設定後に追加する
                     item.SubItems.Add(senderText);
                     item.SubItems.Add(subjectText);
                     item.SubItems.Add(displayDate);
@@ -462,24 +512,11 @@ namespace MizuMail
                     item.SubItems.Add(string.Join(", ", mail.Labels));
                     item.SubItems.Add(mail.mailName);
 
-                    bool isDraftMail = (mail.Folder.Type == FolderType.Draft && mail.isDraft);
-
-                    if (mail.notReadYet || isDraftMail)
-                    {
-                        item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
-                        item.Font = new Font(baseFont, FontStyle.Bold);
-                    }
-                    else
-                    {
-                        item.Font = new Font(baseFont, FontStyle.Regular);
-                    }
-
                     listMain.Items.Add(item);
                 }
             }
             finally
             {
-                // ★ 必ず EndUpdate が呼ばれる
                 listMain.EndUpdate();
                 listMain.ListViewItemSorter = prevSorter;
                 isUpdatingList = false;
@@ -495,84 +532,102 @@ namespace MizuMail
 
             richTextBody.Clear();
             currentKeyword = "";
-
             buttonAtachMenu.DropDownItems.Clear();
             buttonAtachMenu.Visible = false;
-
             currentMail = null;
             listMain.SelectedItems.Clear();
 
-            var folder = e.Node.Tag as MailFolder;
+            var node = e.Node;
+            await LoadAndShowFolderAsync(node);
+        }
 
-            logger.Debug($"AfterSelect: node='{e.Node.Text}', folder={(folder == null ? "null" : folder.FullPath)}");
+        private async Task LoadAndShowFolderAsync(TreeNode node)
+        {
+            var folder = node.Tag as MailFolder;
 
-            // ★ カラム名の切り替え（あなたのコードそのまま）
+            // ★ VirtualMode を止める
+            bool oldVirtual = listMain.VirtualMode;
+            listMain.VirtualMode = false;
+
+            listMain.BeginUpdate();
+            UpdateColumnHeaders(folder);
+            listMain.EndUpdate();
+
+            if (folder != null)
+            {
+                bool folderLoaded = mailCache.Values.Any(m =>
+                    m != null &&
+                    m.Folder != null &&
+                    m.Folder.FullPath == folder.FullPath
+                );
+
+                if (!folderLoaded)
+                {
+                    await Task.Run(() => LoadEmlFolder(folder));
+
+                    foreach (var key in mailCache.Where(kv => kv.Value == null)
+                                                 .Select(kv => kv.Key)
+                                                 .ToList())
+                    {
+                        mailCache.Remove(key);
+                    }
+                }
+            }
+
+            // ★ VirtualMode を戻す
+            listMain.VirtualMode = oldVirtual;
+
+            // ★ ここでだけ UpdateView
+            UpdateView();
+        }
+
+        private void UpdateColumnHeaders(MailFolder folder)
+        {
             if (folder == null)
             {
                 listMain.Columns[1].Text = "メールボックス名";
                 listMain.Columns[2].Text = "メールアドレス";
                 listMain.Columns[3].Text = "更新日時";
+
+                // メールボックス一覧ではプレビュー・タグ・ファイル名は非表示扱い
+                listMain.Columns[5].Text = "";
+                listMain.Columns[6].Text = "";
+                listMain.Columns[7].Text = "";
+                return;
             }
-            else
+
+            switch (folder.Type)
             {
-                switch (folder.Type)
-                {
-                    case FolderType.Inbox:
-                    case FolderType.InboxSub:
-                    case FolderType.Spam:
-                        listMain.Columns[1].Text = "差出人";
-                        listMain.Columns[2].Text = "件名";
-                        listMain.Columns[3].Text = "受信日時";
-                        break;
+                case FolderType.Inbox:
+                case FolderType.InboxSub:
+                case FolderType.Spam:
+                    listMain.Columns[1].Text = "差出人";
+                    listMain.Columns[2].Text = "件名";
+                    listMain.Columns[3].Text = "受信日時";
+                    break;
 
-                    case FolderType.Send:
-                        listMain.Columns[1].Text = "宛先";
-                        listMain.Columns[2].Text = "件名";
-                        listMain.Columns[3].Text = "送信日時";
-                        break;
+                case FolderType.Send:
+                    listMain.Columns[1].Text = "宛先";
+                    listMain.Columns[2].Text = "件名";
+                    listMain.Columns[3].Text = "送信日時";
+                    break;
 
-                    case FolderType.Draft:
-                        listMain.Columns[1].Text = "宛先(下書き)";
-                        listMain.Columns[2].Text = "件名";
-                        listMain.Columns[3].Text = "作成日時";
-                        break;
+                case FolderType.Draft:
+                    listMain.Columns[1].Text = "宛先(下書き)";
+                    listMain.Columns[2].Text = "件名";
+                    listMain.Columns[3].Text = "作成日時";
+                    break;
 
-                    case FolderType.Trash:
-                        listMain.Columns[1].Text = "差出人または宛先";
-                        listMain.Columns[2].Text = "件名";
-                        listMain.Columns[3].Text = "受信日時または送信日時";
-                        break;
-                }
-                listMain.Columns[5].Text = "プレビュー";
-                listMain.Columns[6].Text = "タグ";
-                listMain.Columns[7].Text = "メールファイル名";
+                case FolderType.Trash:
+                    listMain.Columns[1].Text = "差出人または宛先";
+                    listMain.Columns[2].Text = "件名";
+                    listMain.Columns[3].Text = "受信日時または送信日時";
+                    break;
             }
 
-            // ★ 選択されたフォルダをローカル変数に固定
-            var selectedFolder = folder;
-
-            bool folderLoaded = mailCache.Values.Any(m =>
-                m != null &&
-                m.Folder != null &&
-                m.Folder.FullPath == selectedFolder?.FullPath
-            );
-
-            if (!folderLoaded && selectedFolder != null)
-            {
-                await Task.Run(() => LoadEmlFolder(selectedFolder));
-
-                // ★ null キャッシュ掃除
-                foreach (var key in mailCache.Where(kv => kv.Value == null)
-                                             .Select(kv => kv.Key)
-                                             .ToList())
-                {
-                    mailCache.Remove(key);
-                }
-            }
-
-            logger.Debug($"mailCache count = {mailCache.Count}");
-
-            UpdateListView();
+            listMain.Columns[5].Text = "プレビュー";
+            listMain.Columns[6].Text = "タグ";
+            listMain.Columns[7].Text = "メールファイル名";
         }
 
         private void menuAccountSetting_Click(object sender, EventArgs e)
@@ -837,6 +892,7 @@ namespace MizuMail
             var env = await CoreWebView2Environment.CreateAsync(null, null, new CoreWebView2EnvironmentOptions("--allow-file-access-from-files"));
             await browserMail.EnsureCoreWebView2Async(env);
             charWidth = TextRenderer.MeasureText("あ", listMain.Font).Width;
+            listMain.Sorting = SortOrder.None;
 
             // ② 設定読み込み
             LoadSettings();
@@ -881,7 +937,7 @@ namespace MizuMail
             RestoreColumnWidths();
 
             // ⑦ 表示更新（LoadEmlFolder を使う）
-            UpdateView();
+            //UpdateView();
 
             // ⑧ タイマー開始
             SetTimer(Mail.checkMail, Mail.checkInterval);
@@ -2124,15 +2180,29 @@ namespace MizuMail
             listMain.EndUpdate();
         }
 
+        private ListViewItemComparer _comparer = ListViewItemComparer.Default;
+
         private void listMain_ColumnClick(object sender, ColumnClickEventArgs e)
         {
-            // 既存の sorter を使う
-            if (listViewItemSorter == null)
-                listViewItemSorter = ListViewItemComparer.Default;
+            // 列が同じなら昇順/降順を反転
+            if (_comparer.Column == e.Column)
+            {
+                _comparer.Order = _comparer.Order == SortOrder.Ascending
+                    ? SortOrder.Descending
+                    : SortOrder.Ascending;
+            }
+            else
+            {
+                // 別の列をクリックしたら、その列で昇順から始める
+                _comparer.Column = e.Column;
+                _comparer.Order = SortOrder.Ascending;
+            }
 
-            listViewItemSorter.Column = e.Column;
-            listMain.ListViewItemSorter = listViewItemSorter;
+            // モードを設定（Default の ColumnModes を使う）
+            _comparer.ColumnModes = ListViewItemComparer.Default.ColumnModes;
 
+            // Sorter を設定してソート実行
+            listMain.ListViewItemSorter = _comparer;
             listMain.Sort();
         }
 
