@@ -314,11 +314,8 @@ namespace MizuMail
 
             UpdateTreeView();
 
-            // ★ UpdateListView を遅延実行（描画タイミングをずらす）
-            this.BeginInvoke((MethodInvoker)(() =>
-            {
-                UpdateListView();
-            }));
+            // ★ 直接呼ぶ（BeginInvoke をやめる）
+            UpdateListView();
 
             listMain.ListViewItemSorter = listViewItemSorter;
 
@@ -525,20 +522,36 @@ namespace MizuMail
             logger.Debug($"[UpdateListView] 完了 {updateListViewCount} 回目");
         }
 
+        private bool _handlingSelect = false;
+
         private async void treeMain_AfterSelect(object sender, TreeViewEventArgs e)
         {
             if (isBuildingTree)
                 return;
 
-            richTextBody.Clear();
-            currentKeyword = "";
-            buttonAtachMenu.DropDownItems.Clear();
-            buttonAtachMenu.Visible = false;
-            currentMail = null;
-            listMain.SelectedItems.Clear();
+            if (_handlingSelect)
+                return;
 
-            var node = e.Node;
-            await LoadAndShowFolderAsync(node);
+            _handlingSelect = true;
+
+            try
+            {
+                richTextBody.Clear();
+                currentKeyword = "";
+                buttonAtachMenu.DropDownItems.Clear();
+                buttonAtachMenu.Visible = false;
+                currentMail = null;
+                listMain.SelectedItems.Clear();
+
+                var node = e.Node;
+                await LoadAndShowFolderAsync(node);
+
+                UpdateView();
+            }
+            finally
+            {
+                _handlingSelect = false;
+            }
         }
 
         private async Task LoadAndShowFolderAsync(TreeNode node)
@@ -576,9 +589,6 @@ namespace MizuMail
 
             // ★ VirtualMode を戻す
             listMain.VirtualMode = oldVirtual;
-
-            // ★ ここでだけ UpdateView
-            UpdateView();
         }
 
         private void UpdateColumnHeaders(MailFolder folder)
