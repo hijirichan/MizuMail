@@ -61,6 +61,7 @@ namespace MizuMail
         private bool showHeader = false;
         private int charWidth;
         private bool isUpdatingList = false;
+        private bool suppressSelect = false;
 
         private System.Windows.Forms.Timer resizeTimer;
         private int updateListViewCount = 0;
@@ -313,10 +314,7 @@ namespace MizuMail
             listMain.ListViewItemSorter = null;
 
             UpdateTreeView();
-
-            // ★ 直接呼ぶ（BeginInvoke をやめる）
             UpdateListView();
-
             listMain.ListViewItemSorter = listViewItemSorter;
 
             UpdateUndoState();
@@ -393,7 +391,7 @@ namespace MizuMail
                 }
                 finally
                 {
-                    listMain.EndUpdate();
+                    try { listMain.EndUpdate(); } catch { }
                     listMain.ListViewItemSorter = prevSorter;
                     isUpdatingList = false;
                 }
@@ -452,10 +450,17 @@ namespace MizuMail
                 return fitted;
             }
 
+            listMain.SuspendLayout();
+            listMain.BeginUpdate();
+
+            // ロード中メッセージ
+            labelMessage.Text = "読み込み中...";
+
             try
             {
-                listMain.BeginUpdate();
+                // ★ ここで初めて Clear（ロード完了後）
                 listMain.Items.Clear();
+
                 mailBoxViewFlag = false;
 
                 int colSenderWidth = listMain.Columns[1].Width;
@@ -515,56 +520,57 @@ namespace MizuMail
             finally
             {
                 listMain.EndUpdate();
+                listMain.ResumeLayout();
+                listMain.Visible = true;
                 listMain.ListViewItemSorter = prevSorter;
                 isUpdatingList = false;
+                listMain.SelectedItems.Clear();
+
+                // ★ ロード完了メッセージ
+                labelMessage.Text = $"{displayList.Count}件読み込みました。";
             }
 
             logger.Debug($"[UpdateListView] 完了 {updateListViewCount} 回目");
         }
 
-        private bool _handlingSelect = false;
+        // フィールドに追加
+        private bool _firstSelectHandled = false;
 
         private async void treeMain_AfterSelect(object sender, TreeViewEventArgs e)
         {
+            if (suppressSelect)
+                return;
+
             if (isBuildingTree)
                 return;
 
-            if (_handlingSelect)
+            // ★ フォーム起動直後の「勝手に当たるフォーカス」は無視する
+            if (!_firstSelectHandled)
+            {
+                _firstSelectHandled = true;
                 return;
-
-            _handlingSelect = true;
-
-            try
-            {
-                richTextBody.Clear();
-                currentKeyword = "";
-                buttonAtachMenu.DropDownItems.Clear();
-                buttonAtachMenu.Visible = false;
-                currentMail = null;
-                listMain.SelectedItems.Clear();
-
-                var node = e.Node;
-                await LoadAndShowFolderAsync(node);
-
-                UpdateView();
             }
-            finally
-            {
-                _handlingSelect = false;
-            }
+
+            richTextBody.Clear();
+            currentKeyword = "";
+            buttonAtachMenu.DropDownItems.Clear();
+            buttonAtachMenu.Visible = false;
+            currentMail = null;
+
+            var node = e.Node;
+            listMain.Visible = false;
+            await LoadAndShowFolderAsync(node);
+
+            // ★★★ これが無かったせいで画面が更新されていなかった
+            UpdateView();
         }
 
         private async Task LoadAndShowFolderAsync(TreeNode node)
         {
             var folder = node.Tag as MailFolder;
 
-            // ★ VirtualMode を止める
-            bool oldVirtual = listMain.VirtualMode;
-            listMain.VirtualMode = false;
-
-            listMain.BeginUpdate();
+            // カラムだけ更新
             UpdateColumnHeaders(folder);
-            listMain.EndUpdate();
 
             if (folder != null)
             {
@@ -576,7 +582,8 @@ namespace MizuMail
 
                 if (!folderLoaded)
                 {
-                    await Task.Run(() => LoadEmlFolder(folder));
+                    LoadEmlFolder(folder);
+                    UpdateView();
 
                     foreach (var key in mailCache.Where(kv => kv.Value == null)
                                                  .Select(kv => kv.Key)
@@ -586,9 +593,6 @@ namespace MizuMail
                     }
                 }
             }
-
-            // ★ VirtualMode を戻す
-            listMain.VirtualMode = oldVirtual;
         }
 
         private void UpdateColumnHeaders(MailFolder folder)
@@ -928,7 +932,6 @@ namespace MizuMail
             root.Nodes[2].Tag = folderManager.Send;
             root.Nodes[3].Tag = folderManager.Draft;
             root.Nodes[4].Tag = folderManager.Trash;
-            treeMain.SelectedNode = inboxNode; // ★ ここで初めて選択
 
             var img = new ImageList();
             img.ImageSize = new Size(16, 16);
@@ -946,7 +949,13 @@ namespace MizuMail
             // ⑥ カラム幅復元
             RestoreColumnWidths();
 
-            // ⑦ 表示更新（LoadEmlFolder を使う）
+            // ⑦ 表示更新
+            suppressSelect = true;
+            treeMain.SelectedNode = inboxNode;
+            suppressSelect = false;
+
+            listMain.Visible = false;
+            await LoadAndShowFolderAsync(inboxNode);
             //UpdateView();
 
             // ⑧ タイマー開始
@@ -954,6 +963,10 @@ namespace MizuMail
 
             // ⑨ 展開
             treeMain.ExpandAll();
+            listMain.VirtualMode = false;
+
+            // AfterSelect の「初回スキップ」があるなら、ここで済んだことにしておく
+            _firstSelectHandled = true;
         }
 
         private void RestoreColumnWidths()
