@@ -744,6 +744,7 @@ namespace MizuMail
             this.listMain.TabIndex = 0;
             this.listMain.UseCompatibleStateImageBehavior = false;
             this.listMain.View = System.Windows.Forms.View.Details;
+            this.listMain.VirtualMode = true;
             this.listMain.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.listMain_ColumnClick);
             this.listMain.ColumnWidthChanged += new System.Windows.Forms.ColumnWidthChangedEventHandler(this.listMain_ColumnWidthChanged);
             this.listMain.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.listMain_ItemDrag);

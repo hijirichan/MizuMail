@@ -10,6 +10,7 @@ using MimeKit.Encodings;
 using MimeKit.Text;
 using Newtonsoft.Json;
 using NLog;
+using NLog.Filters;
 using NLog.Targets;
 using Org.BouncyCastle.Asn1.X509;
 using System;
@@ -67,12 +68,15 @@ namespace MizuMail
         private int updateListViewCount = 0;
         private DateTime updateListViewStart = DateTime.MinValue;
         HashSet<MailFolder> updatedFolders = new HashSet<MailFolder>();
+        private List<Mail> _virtualList = new List<Mail>();
         private Dictionary<MailFolder, TreeNode> folderNodeMap = new Dictionary<MailFolder, TreeNode>();
         private Stack<TagUndoAction> tagUndoStack = new Stack<TagUndoAction>();
         private Stack<TagUndoAction> tagRedoStack = new Stack<TagUndoAction>();
         // ★ 事前に1回だけ作る（FormMain のフィールド）
         private readonly Font boldFont;
         private readonly Font normalFont;
+        private int sortColumn = 0;
+        private bool sortAscending = true;
 
         // ★ メールルール
         private List<MailRule> rules = new List<MailRule>();
@@ -253,6 +257,8 @@ namespace MizuMail
             listMain.SmallImageList = new ImageList { ImageSize = new Size(1, 20) };
             listViewItemSorter = ListViewItemComparer.Default;
             listMain.ListViewItemSorter = listViewItemSorter;
+            listMain.VirtualMode = true;
+            listMain.RetrieveVirtualItem += listMain_RetrieveVirtualItem;
         }
 
         private bool CheckWebView2Runtime()
@@ -371,163 +377,136 @@ namespace MizuMail
                 return;
 
             isUpdatingList = true;
-
-            var prevSorter = listMain.ListViewItemSorter;
-            listMain.ListViewItemSorter = null;
-
             updateListViewCount++;
             logger.Debug($"[UpdateListView] 呼び出し {updateListViewCount} 回目  時刻: {DateTime.Now:HH:mm:ss.fff}");
 
-            TreeNode node = treeMain.SelectedNode;
-            MailFolder folder = node?.Tag as MailFolder;
-
-            // ★ メールボックス一覧
-            if (folder == null)
-            {
-                listMain.BeginUpdate();
-                try
-                {
-                    ShowMailboxInfo();
-                }
-                finally
-                {
-                    try { listMain.EndUpdate(); } catch { }
-                    listMain.ListViewItemSorter = prevSorter;
-                    isUpdatingList = false;
-                }
-                return;
-            }
-
-            // ★ displayList を高速抽出
-            var displayList = new List<Mail>();
-            foreach (var m in mailCache.Values)
-            {
-                if (m != null && m.Folder != null &&
-                    m.Folder.FullPath == folder.FullPath)
-                {
-                    displayList.Add(m);
-                }
-            }
-
-            logger.Debug($"UpdateListView: folder={folder.FullPath}, displayCount={displayList.Count}");
-
-            // ★ キーワードフィルタ
-            if (!string.IsNullOrEmpty(currentKeyword))
-            {
-                string kw = currentKeyword;
-                displayList = displayList
-                    .Where(m =>
-                        (m.subject?.Contains(kw) ?? false) ||
-                        (m.body?.Contains(kw) ?? false) ||
-                        (m.address?.Contains(kw) ?? false))
-                    .ToList();
-            }
-
-            // ★ フィルタコンボ
-            string filter = toolFilterCombo.SelectedItem?.ToString();
-            if (filter == "未読")
-                displayList = displayList.Where(m => m.notReadYet).ToList();
-            else if (filter == "添付あり")
-                displayList = displayList.Where(m => m.hasAtach).ToList();
-            else if (filter == "今日")
-                displayList = displayList.Where(m =>
-                {
-                    if (DateTime.TryParse(m.date, out DateTime dt))
-                        return dt.Date == DateTime.Now.Date;
-                    return false;
-                }).ToList();
-
-            // ★ FitTextToColumn キャッシュ
-            var textCache = new Dictionary<string, string>();
-            string FitCached(string text, int width)
-            {
-                if (text == null) return "";
-                if (textCache.TryGetValue(text, out var cached))
-                    return cached;
-
-                var fitted = FitTextToColumn(text, width, normalFont);
-                textCache[text] = fitted;
-                return fitted;
-            }
-
-            listMain.SuspendLayout();
-            listMain.BeginUpdate();
-
-            // ロード中メッセージ
-            labelMessage.Text = "読み込み中...";
-
             try
             {
-                // ★ ここで初めて Clear（ロード完了後）
-                listMain.Items.Clear();
+                TreeNode node = treeMain.SelectedNode;
+                MailFolder folder = node?.Tag as MailFolder;
 
+                //
+                // ★★★ メールボックス一覧モード（folder == null）
+                //
+                if (folder == null)
+                {
+                    logger.Debug("[UpdateListView] folder == null → MailboxView");
+
+                    // ★ VirtualMode の内部データを完全リセット
+                    _virtualList.Clear();
+
+                    // ★ 選択をクリア（古い選択イベント対策）
+                    listMain.SelectedIndices.Clear();
+
+                    // ★ VirtualListSize を 0 にして内部状態をリセット
+                    if (listMain.VirtualMode)
+                        listMain.VirtualListSize = 0;
+
+                    // ★ VirtualMode を OFF に戻す
+                    if (listMain.VirtualMode)
+                    {
+                        listMain.VirtualMode = false;
+                        listMain.RetrieveVirtualItem -= listMain_RetrieveVirtualItem;
+                    }
+
+                    listMain.BeginUpdate();
+                    try
+                    {
+                        listMain.Items.Clear();
+                        ShowMailboxInfo();   // Items.Add ベースで OK
+                    }
+                    finally
+                    {
+                        try { listMain.EndUpdate(); } catch { }
+                    }
+
+                    labelMessage.Text = "メールボックス一覧";
+
+                    // ★★★ Visible を true に戻す（消失対策）
+                    listMain.Visible = true;
+
+                    return;
+                }
+
+                //
+                // ★★★ メール一覧モード（VirtualMode ON）
+                //
                 mailBoxViewFlag = false;
 
-                int colSenderWidth = listMain.Columns[1].Width;
-                int colSubjectWidth = listMain.Columns[2].Width;
-                int colPreviewWidth = listMain.Columns[5].Width;
-
-                foreach (var mail in displayList)
+                if (!listMain.VirtualMode)
                 {
-                    string col0 = (mail.Folder.Type == FolderType.Send || mail.Folder.Type == FolderType.Draft)
-                        ? mail.address
-                        : mail.from;
+                    listMain.Items.Clear();
+                    listMain.VirtualMode = true;
+                    listMain.RetrieveVirtualItem += listMain_RetrieveVirtualItem;
+                }
 
-                    string senderText = FitCached(col0, colSenderWidth);
-                    string subjectText = FitCached(mail.subject, colSubjectWidth);
+                // ★ displayList 抽出
+                var displayList = mailCache.Values
+                    .Where(m => m != null &&
+                                m.Folder != null &&
+                                m.Folder.FullPath == folder.FullPath)
+                    .ToList();
 
-                    // ★ preview を短くする（高速化）
-                    string previewShort = mail.preview.Length > 60
-                        ? mail.preview.Substring(0, 60)
-                        : mail.preview;
-
-                    string previewText = FitCached(previewShort, colPreviewWidth);
-
-                    string displayDate = FormatReceivedDate(mail.date);
-
-                    // ★ 先にスタイルを設定する（重要）
-                    var item = new ListViewItem(" ", 0)
+                // ★ デフォルトは日付降順
+                displayList = displayList
+                    .OrderByDescending(m =>
                     {
-                        ImageIndex = GetMailIconIndex(mail),
-                        Tag = mail,
-                        UseItemStyleForSubItems = true
-                    };
+                        if (DateTime.TryParse(m.date, out DateTime dt))
+                            return dt;
+                        return DateTime.MinValue;
+                    })
+                    .ToList();
 
-                    bool isDraftMail = (mail.Folder.Type == FolderType.Draft && mail.isDraft);
+                // ★ キーワードフィルタ
+                if (!string.IsNullOrEmpty(currentKeyword))
+                {
+                    string kw = currentKeyword;
+                    displayList = displayList
+                        .Where(m =>
+                            (m.subject?.Contains(kw) ?? false) ||
+                            (m.body?.Contains(kw) ?? false) ||
+                            (m.address?.Contains(kw) ?? false))
+                        .ToList();
+                }
 
-                    if (mail.notReadYet || isDraftMail)
+                // ★ フィルタコンボ
+                string filter = toolFilterCombo.SelectedItem?.ToString();
+                if (filter == "未読")
+                    displayList = displayList.Where(m => m.notReadYet).ToList();
+                else if (filter == "添付あり")
+                    displayList = displayList.Where(m => m.hasAtach).ToList();
+                else if (filter == "今日")
+                    displayList = displayList.Where(m =>
                     {
-                        item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
-                        item.Font = boldFont;
-                    }
-                    else
-                    {
-                        item.Font = normalFont;
-                    }
+                        if (DateTime.TryParse(m.date, out DateTime dt))
+                            return dt.Date == DateTime.Now.Date;
+                        return false;
+                    }).ToList();
 
-                    // ★ SubItems はスタイル設定後に追加する
-                    item.SubItems.Add(senderText);
-                    item.SubItems.Add(subjectText);
-                    item.SubItems.Add(displayDate);
-                    item.SubItems.Add(FormatSize(mail.sizeBytes));
-                    item.SubItems.Add(previewText);
-                    item.SubItems.Add(string.Join(", ", mail.Labels));
-                    item.SubItems.Add(mail.mailName);
+                // ★ VirtualMode 用データソースにセット
+                _virtualList = displayList;
 
-                    listMain.Items.Add(item);
+                // ★ VirtualListSize を更新（描画トリガー）
+                listMain.VirtualListSize = _virtualList.Count;
+
+                listMain.Visible = true;
+                labelMessage.Text = $"{_virtualList.Count}件読み込みました。";
+
+                logger.Debug($"VirtualListSize={listMain.VirtualListSize}, _virtualList.Count={_virtualList.Count}");
+
+                //
+                // ★★★ 選択の安定化（最重要）
+                //
+                listMain.SelectedIndices.Clear();
+
+                if (_virtualList.Count > 0)
+                {
+                    listMain.SelectedIndices.Add(0);
                 }
             }
             finally
             {
-                listMain.EndUpdate();
-                listMain.ResumeLayout();
-                listMain.Visible = true;
-                listMain.ListViewItemSorter = prevSorter;
                 isUpdatingList = false;
-                listMain.SelectedItems.Clear();
-
-                // ★ ロード完了メッセージ
-                labelMessage.Text = $"{displayList.Count}件読み込みました。";
             }
 
             logger.Debug($"[UpdateListView] 完了 {updateListViewCount} 回目");
@@ -569,11 +548,12 @@ namespace MizuMail
         {
             var folder = node.Tag as MailFolder;
 
-            // カラムだけ更新
+            // カラムだけ先に更新（UIスレッドでOK）
             UpdateColumnHeaders(folder);
 
             if (folder != null)
             {
+                // すでにロード済みか？
                 bool folderLoaded = mailCache.Values.Any(m =>
                     m != null &&
                     m.Folder != null &&
@@ -582,9 +562,10 @@ namespace MizuMail
 
                 if (!folderLoaded)
                 {
-                    LoadEmlFolder(folder);
-                    UpdateView();
+                    // ★★★ 重い処理はバックグラウンドで実行（UIを止めない）
+                    await Task.Run(() => LoadEmlFolder(folder));
 
+                    // ★ null の削除（軽いのでUIスレッドでOK）
                     foreach (var key in mailCache.Where(kv => kv.Value == null)
                                                  .Select(kv => kv.Key)
                                                  .ToList())
@@ -593,6 +574,9 @@ namespace MizuMail
                     }
                 }
             }
+
+            // ★★★ ロード完了後に UI 更新（UIスレッドで実行）
+            UpdateView();
         }
 
         private void UpdateColumnHeaders(MailFolder folder)
@@ -764,39 +748,60 @@ namespace MizuMail
 
         private void listMain_DoubleClick(object sender, EventArgs e)
         {
-            if (listMain.SelectedItems.Count == 0)
+            if (listMain.SelectedIndices.Count == 0)
                 return;
 
-            Mail mail = listMain.SelectedItems[0].Tag as Mail;
+            int index = listMain.SelectedIndices[0];
+
+            // ★ VirtualMode 安全対策：範囲外なら無視
+            if (index < 0 || index >= _virtualList.Count)
+                return;
+
+            Mail mail = _virtualList[index];
             if (mail == null)
                 return;
 
-            // ★ Trash 以外は既読・未読トグル
-            if (mail.Folder.Type != FolderType.Trash)
-            {
-                ToggleReadState(mail);
-            }
-
-            // ★ 送信メールだけは編集画面を開く
+            // ★ 送信メール・下書きメールは編集画面を開く（最優先）
             if (mail.Folder.Type == FolderType.Send || mail.Folder.Type == FolderType.Draft)
             {
                 OpenSendMailEditor(mail);
                 return;
             }
 
-            UpdateListView();
+            // ★ Trash 以外は既読化
+            if (mail.Folder.Type != FolderType.Trash)
+            {
+                ToggleReadState(mail);
+
+                // ★ VirtualMode ではこの行だけ再描画すれば十分
+                listMain.RedrawItems(index, index, true);
+            }
+
+            // ★ 本文表示
+            currentMail = mail;
+            UpdateMailView();
         }
 
         private void listMain_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            if (!e.IsSelected || listMain.SelectedItems.Count != 1)
+            if (listMain.SelectedIndices.Count != 1)
             {
                 currentMail = null;
                 UpdateMailView();
                 return;
             }
 
-            currentMail = e.Item.Tag as Mail;
+            int index = listMain.SelectedIndices[0];
+
+            // ★ VirtualMode 安全対策：範囲外なら無視
+            if (index < 0 || index >= _virtualList.Count)
+            {
+                currentMail = null;
+                UpdateMailView();
+                return;
+            }
+
+            currentMail = _virtualList[index];
             UpdateMailView();
         }
 
@@ -828,24 +833,35 @@ namespace MizuMail
 
             foreach (var part in full.BodyParts)
             {
-                var mp = part as MimePart;
-                if (mp != null && mp.IsAttachment)
+                if (part is MimePart mp && mp.IsAttachment)
                 {
                     string fileName = mp.FileName;
 
-                    // ★ 一時フォルダに保存
-                    string tempPath = Path.Combine(Path.GetTempPath(), fileName);
+                    // ★ 一時ファイル名をユニークにする
+                    string tempPath = Path.Combine(
+                        Path.GetTempPath(),
+                        Guid.NewGuid().ToString("N") + "_" + fileName
+                    );
+
                     using (var stream = File.Create(tempPath))
                     {
                         mp.Content.DecodeTo(stream);
                     }
 
-                    // ★ アイコン取得（ここで初めて成功する）
-                    Icon icon = Icon.ExtractAssociatedIcon(tempPath);
+                    // ★ アイコン取得（例外対策）
+                    Icon icon;
+                    try
+                    {
+                        icon = Icon.ExtractAssociatedIcon(tempPath);
+                    }
+                    catch
+                    {
+                        icon = SystemIcons.Application;
+                    }
 
-                    // ★ メニューに追加
                     var item = new ToolStripMenuItem(fileName, icon.ToBitmap());
-                    item.Tag = tempPath; // 保存先パスを保持
+                    item.Tag = tempPath;
+
                     buttonAtachMenu.DropDownItems.Add(item);
                 }
             }
@@ -954,16 +970,14 @@ namespace MizuMail
             treeMain.SelectedNode = inboxNode;
             suppressSelect = false;
 
-            listMain.Visible = false;
             await LoadAndShowFolderAsync(inboxNode);
-            //UpdateView();
+            UpdateView();
 
             // ⑧ タイマー開始
             SetTimer(Mail.checkMail, Mail.checkInterval);
 
             // ⑨ 展開
             treeMain.ExpandAll();
-            listMain.VirtualMode = false;
 
             // AfterSelect の「初回スキップ」があるなら、ここで済んだことにしておく
             _firstSelectHandled = true;
@@ -1020,10 +1034,17 @@ namespace MizuMail
 
         private void menuDelete_Click(object sender, EventArgs e)
         {
-            var selected = listMain.SelectedItems.Cast<ListViewItem>()
-                                                 .Select(i => i.Tag as Mail)
-                                                 .Where(m => m != null)
-                                                 .ToList();
+            if (listMain.SelectedIndices.Count == 0)
+                return;
+
+            // ★ VirtualMode では SelectedItems を使わない
+            //    まず選択された Mail を取得
+            var selected = listMain.SelectedIndices
+                                   .Cast<int>()
+                                   .Select(i => _virtualList[i])
+                                   .Where(m => m != null)
+                                   .ToList();
+
             if (selected.Count == 0)
                 return;
 
@@ -1040,7 +1061,9 @@ namespace MizuMail
                     permanentTargets.Add(mail);
             }
 
-            // ごみ箱へ移動
+            //
+            // ★ ごみ箱へ移動（確認ダイアログあり）
+            //
             if (trashTargets.Count > 0)
             {
                 string msg = $"選択したメール {trashTargets.Count} 件をごみ箱に移動します。よろしいですか？";
@@ -1051,7 +1074,9 @@ namespace MizuMail
                 }
             }
 
-            // ごみ箱内の完全削除
+            //
+            // ★ ごみ箱内の完全削除（確認ダイアログあり）
+            //
             if (permanentTargets.Count > 0)
             {
                 string msg = $"ごみ箱内のメール {permanentTargets.Count} 件を完全に削除します。元に戻せません。";
@@ -1062,28 +1087,50 @@ namespace MizuMail
                 }
             }
 
-            UpdateTreeView();   // 件数だけ更新
-            UpdateListView();   // 選択中フォルダの一覧を更新
+            //
+            // ★ VirtualMode では _virtualList から削除されたメールを除外する必要がある
+            //
+            _virtualList = _virtualList
+                .Where(m => m != null && !trashTargets.Contains(m) && !permanentTargets.Contains(m))
+                .ToList();
 
+            // ★ VirtualListSize を更新（最重要）
+            listMain.VirtualListSize = _virtualList.Count;
+
+            // ★ 再描画
+            listMain.Invalidate();
+
+            // ★ TreeView の件数更新
+            UpdateTreeView();
+
+            // ★ 本文クリア
             currentMail = null;
+            UpdateMailView();
+
             UpdateUndoState();
         }
 
         private void menuNotReadYet_Click(object sender, EventArgs e)
         {
-            if (listMain.SelectedItems.Count == 0)
+            if (listMain.SelectedIndices.Count == 0)
                 return;
 
-            foreach (ListViewItem item in listMain.SelectedItems)
+            foreach (int index in listMain.SelectedIndices)
             {
-                if (item.Tag is Mail mail)
+                Mail mail = _virtualList[index];
+                if (mail != null && !mail.notReadYet)
                 {
-                    if (!mail.notReadYet)
-                        ToggleReadState(mail);
+                    ToggleReadState(mail); // ★ 既読 → 未読 に戻す
                 }
             }
 
-            UpdateView();
+            // ★ VirtualMode では部分再描画が最速
+            int first = listMain.SelectedIndices[0];
+            int last = listMain.SelectedIndices[listMain.SelectedIndices.Count - 1];
+            listMain.RedrawItems(first, last, true);
+
+            // ★ 本文表示を更新（未読に戻した場合でも自然）
+            UpdateMailView();
         }
 
         private void menuAppExit_Click(object sender, EventArgs e)
@@ -1115,7 +1162,7 @@ namespace MizuMail
                 string body = form.textMailBody.Text;
                 string cc = form.textMailCc.Text;
                 string bcc = form.textMailBcc.Text;
-                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text));
+                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Tag?.ToString() ?? ""));
                 string date = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
                 // 宛先、本文がある場合
@@ -1135,6 +1182,7 @@ namespace MizuMail
 
                     // ★ Draft フォルダの一覧を更新
                     LoadEmlFolder(folderManager.Draft);
+                    treeMain.SelectedNode = folderNodeMap[folderManager.Draft];
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -1289,18 +1337,20 @@ namespace MizuMail
 
         private void buttonAtachMenu_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
-            if (listMain.SelectedItems.Count == 0)
+            if (listMain.SelectedIndices.Count == 0)
                 return;
 
-            Mail mail = listMain.SelectedItems[0].Tag as Mail;
+            int index = listMain.SelectedIndices[0];
+            Mail mail = _virtualList[index];
             if (mail == null)
                 return;
 
             string fileName = e.ClickedItem.Tag as string;
+            if (fileName == null)
+                return;
 
             var message = MimeMessage.Load(mail.mailPath);
 
-            // 添付パートを検索
             var part = FindAttachments(message.Body)
                 .FirstOrDefault(p =>
                     string.Equals(GetAttachmentName(p), fileName, StringComparison.OrdinalIgnoreCase));
@@ -1311,18 +1361,33 @@ namespace MizuMail
                 return;
             }
 
-            // Temp に展開
             string tempDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "tmp");
             Directory.CreateDirectory(tempDir);
 
-            string tempPath = Path.Combine(tempDir, fileName);
+            // ★ ユニークな一時ファイル名
+            string tempPath = Path.Combine(
+                tempDir,
+                Guid.NewGuid().ToString("N") + "_" + fileName
+            );
 
             using (var stream = File.Create(tempPath))
                 part.Content.DecodeTo(stream);
 
-            if(MessageBox.Show($"選択したファイル{tempPath}を開きますか？\nファイルによってはウィルスの可能性もありますので注意してください。", "確認", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBox.Show(
+                $"選択したファイル {tempPath} を開きますか？\n" +
+                "ファイルによってはウィルスの可能性もありますので注意してください。",
+                "確認",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                Process.Start(tempPath);
+                try
+                {
+                    Process.Start(tempPath);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("ファイルを開けませんでした。\n" + ex.Message);
+                }
             }
         }
 
@@ -1363,17 +1428,42 @@ namespace MizuMail
 
         private void Application_Idle(object sender, EventArgs e)
         {
-            toolReplyButton.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            toolDeleteButton.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
-            menuRead.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
-            menuNotReadYet.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
-            menuDelete.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
-            menuMailDelete.Enabled = listMain.SelectedItems.Count > 0 && mailBoxViewFlag == false;
-            menuMailReply.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            toolShowHeader.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            menuEditTags.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
+            // ★ メールボックス一覧モードでは UI を触らない
+            if (mailBoxViewFlag)
+            {
+                toolReplyButton.Enabled = false;
+                toolDeleteButton.Enabled = false;
+                menuRead.Enabled = false;
+                menuNotReadYet.Enabled = false;
+                menuDelete.Enabled = false;
+                menuMailDelete.Enabled = false;
+                menuMailReply.Enabled = false;
+                toolShowHeader.Enabled = false;
+                menuEditTags.Enabled = false;
+                menuSaveAs.Enabled = false;
+                menuSpeechMail.Enabled = false;
+                menuAddToAddressBook.Enabled = false;
+                menuUndoTags.Enabled = false;
+                menuRedoTags.Enabled = false;
+                menuAttachmentFileAllSave.Enabled = false;
+                return;
+            }
 
-            // ★ Trash フォルダがまだ初期化されていない場合は何もしない
+            int selCount = listMain.SelectedIndices.Count;
+            bool hasOne = selCount == 1;
+            bool hasAny = selCount > 0;
+
+            toolReplyButton.Enabled = hasOne;
+            toolDeleteButton.Enabled = hasAny;
+            menuRead.Enabled = hasAny;
+            menuNotReadYet.Enabled = hasAny;
+            menuDelete.Enabled = hasAny;
+            menuMailDelete.Enabled = hasAny;
+            menuMailReply.Enabled = hasOne;
+            toolShowHeader.Enabled = hasOne;
+            menuEditTags.Enabled = hasOne;
+
+            // ★ Trash フォルダのチェック（ここは今のままでOK）
             if (folderManager?.Trash == null || folderManager.Trash.FullPath == null)
             {
                 menuFileClearTrash.Enabled = false;
@@ -1383,7 +1473,6 @@ namespace MizuMail
 
             string fullPath = folderManager.Trash.FullPath;
 
-            // ★ フォルダが存在しない場合も安全に無効化
             if (!Directory.Exists(fullPath))
             {
                 menuFileClearTrash.Enabled = false;
@@ -1391,18 +1480,18 @@ namespace MizuMail
                 return;
             }
 
-            // ★ ゴミ箱に .eml または .meta があるかどうか
             bool hasEml = Directory.GetFiles(fullPath, "*.eml").Length > 0;
             bool hasMeta = Directory.GetFiles(fullPath, "*.meta").Length > 0;
             menuFileClearTrash.Enabled = hasEml || hasMeta;
             menuClearTrash.Enabled = hasEml || hasMeta;
 
-            menuSaveAs.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            menuSpeechMail.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            menuAddToAddressBook.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false;
-            menuUndoTags.Enabled = listMain.SelectedItems.Count == 1 && tagUndoStack.Count > 0;
-            menuRedoTags.Enabled = listMain.SelectedItems.Count == 1 && tagRedoStack.Count > 0;
-            menuAttachmentFileAllSave.Enabled = listMain.SelectedItems.Count == 1 && mailBoxViewFlag == false && buttonAtachMenu.DropDownItems.Count > 0;
+            menuSaveAs.Enabled = hasOne;
+            menuSpeechMail.Enabled = hasOne;
+            menuAddToAddressBook.Enabled = hasOne;
+            menuUndoTags.Enabled = hasOne && tagUndoStack.Count > 0;
+            menuRedoTags.Enabled = hasOne && tagRedoStack.Count > 0;
+            menuAttachmentFileAllSave.Enabled = hasOne && buttonAtachMenu.DropDownItems.Count > 0;
+
             UpdateUndoState();
         }
 
@@ -1442,7 +1531,7 @@ namespace MizuMail
                 string body = form.textMailBody.Text;
                 string cc = form.textMailCc.Text;
                 string bcc = form.textMailBcc.Text;
-                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text));
+                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(item => item.Tag?.ToString() ?? ""));
                 string date = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
 
                 // 宛先、本文がある場合
@@ -1461,6 +1550,7 @@ namespace MizuMail
                     SaveMail(mail);
                     // ★ Draft フォルダの一覧を更新
                     LoadEmlFolder(folderManager.Draft);
+                    treeMain.SelectedNode = folderNodeMap[folderManager.Draft];
                 }
 
                 // ツリービューとリストビューの表示を更新する
@@ -1470,7 +1560,10 @@ namespace MizuMail
 
         private void menuClearTrash_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("ごみ箱内のメールをすべて完全に削除します。", "確認", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) != DialogResult.OK)
+            if (MessageBox.Show("ごみ箱内のメールをすべて完全に削除します。",
+                                "確認",
+                                MessageBoxButtons.OKCancel,
+                                MessageBoxIcon.Warning) != DialogResult.OK)
                 return;
 
             var trash = folderManager.Trash;
@@ -1488,11 +1581,22 @@ namespace MizuMail
                 catch { }
             }
 
-            // ★ ごみ箱を空にした後は Undo を無効化
-            currentMail = null;
-            menuUndoMail.Enabled = false;
+            // ★ VirtualMode の内部リストも空にする
+            _virtualList.Clear();
+            listMain.VirtualListSize = 0;
+            listMain.Invalidate();
 
+            // ★ 現在メールをクリア
+            currentMail = null;
+
+            // ★ TreeView の件数更新
+            UpdateTreeView();
+
+            // ★ 画面全体を今の状態に合わせて更新
             UpdateView();
+
+            // ★ Undo 状態更新
+            UpdateUndoState();
         }
 
         private void menuHelpAbout_Click(object sender, EventArgs e)
@@ -2030,7 +2134,7 @@ namespace MizuMail
                 if (!File.Exists(newPath))
                     continue;
 
-                // ★ ごみ箱側のキャッシュを必ず削除（最重要）
+                // ★ ごみ箱側のキャッシュを必ず削除
                 if (mailCache.ContainsKey(newPath))
                     mailCache.Remove(newPath);
 
@@ -2046,13 +2150,24 @@ namespace MizuMail
                 File.Delete(metaFile);
             }
 
-            // ★ Undo したフォルダを丸ごと再読み込み（最重要）
+            // ★ 各フォルダを再読み込み（ここで mailCache が最新になる）
             LoadEmlFolder(folderManager.Inbox);
             LoadEmlFolder(folderManager.Trash);
             LoadEmlFolder(folderManager.Send);
             LoadEmlFolder(folderManager.Draft);
 
+            // ★ 画面全体を「今の選択フォルダ」に合わせて更新
             UpdateView();
+
+            // ★ Undo 後に最初のメールを選択し直す（VirtualMode 対応）
+            if (_virtualList.Count > 0)
+            {
+                listMain.SelectedIndices.Clear();
+                listMain.SelectedIndices.Add(0);
+            }
+
+            // ★ Undo 状態更新（もしあれば）
+            UpdateUndoState();
         }
 
         // 音声読み上げの準備
@@ -2158,75 +2273,86 @@ namespace MizuMail
 
         private void ShowSearchResult(List<Mail> list)
         {
-            listMain.BeginUpdate();
-            listMain.Items.Clear();
+            // ★ VirtualMode の内部リストを検索結果に置き換える
+            _virtualList = list;
 
-            var baseFont = listMain.Font;
+            // ★ 件数を更新
+            listMain.VirtualListSize = _virtualList.Count;
 
-            foreach (var mail in list)
-            {
-                // ★ 常に差出人を表示
-                ListViewItem item = new ListViewItem(" ", 0);
+            // ★ 再描画
+            listMain.Invalidate();
 
-                item.ImageIndex = GetMailIconIndex(mail);
-                string senderText = FitTextToColumn(mail.from, listMain.Columns[1].Width, baseFont);
-                item.SubItems.Add(senderText);
-                string subjectText = FitTextToColumn(mail.subject, listMain.Columns[2].Width, baseFont);
-                item.SubItems.Add(subjectText);
-                item.SubItems.Add(FormatReceivedDate(mail.date));
-                item.SubItems.Add(FormatSize(mail.sizeBytes));
-
-                string previewText = FitTextToColumn(mail.preview, listMain.Columns[5].Width, baseFont);
-                item.SubItems.Add(previewText);
-                item.SubItems.Add(string.Join(", ", mail.Labels));
-                item.SubItems.Add(mail.mailName);
-
-                if (HasAttachment(mail))
-                    item.ImageIndex = GetMailIconIndex(mail);
-
-                item.Tag = mail;
-
-                // 未読は太字＋背景色
-                if (mail.notReadYet)
-                {
-                    item.BackColor = Color.FromArgb(0xE8, 0xF4, 0xFF);
-                    item.Font = new Font(baseFont, FontStyle.Bold);
-                }
-                else
-                {
-                    item.Font = new Font(baseFont, FontStyle.Regular);
-                }
-
-                listMain.Items.Add(item);
-            }
-
-            listMain.EndUpdate();
+            // ★ 本文をクリア
+            currentMail = null;
+            UpdateMailView();
         }
 
-        private ListViewItemComparer _comparer = ListViewItemComparer.Default;
+        private int _sortColumn = -1;
+        private bool _sortAscending = true;
 
         private void listMain_ColumnClick(object sender, ColumnClickEventArgs e)
         {
-            // 列が同じなら昇順/降順を反転
-            if (_comparer.Column == e.Column)
-            {
-                _comparer.Order = _comparer.Order == SortOrder.Ascending
-                    ? SortOrder.Descending
-                    : SortOrder.Ascending;
-            }
+            if (sortColumn == e.Column)
+                sortAscending = !sortAscending;
             else
             {
-                // 別の列をクリックしたら、その列で昇順から始める
-                _comparer.Column = e.Column;
-                _comparer.Order = SortOrder.Ascending;
+                sortColumn = e.Column;
+                sortAscending = true;
             }
 
-            // モードを設定（Default の ColumnModes を使う）
-            _comparer.ColumnModes = ListViewItemComparer.Default.ColumnModes;
+            SortVirtualList();
+        }
 
-            // Sorter を設定してソート実行
-            listMain.ListViewItemSorter = _comparer;
-            listMain.Sort();
+        private void SortVirtualList()
+        {
+            if (_virtualList == null || _virtualList.Count == 0)
+                return;
+
+            switch (sortColumn)
+            {
+                case 0: // アイコン（既読/未読）
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => m.notReadYet).ToList()
+                        : _virtualList.OrderByDescending(m => m.notReadYet).ToList();
+                    break;
+
+                case 1: // From
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => m.from).ToList()
+                        : _virtualList.OrderByDescending(m => m.from).ToList();
+                    break;
+
+                case 2: // Subject
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => m.subject).ToList()
+                        : _virtualList.OrderByDescending(m => m.subject).ToList();
+                    break;
+
+                case 3: // Date
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => ParseDate(m.date)).ToList()
+                        : _virtualList.OrderByDescending(m => ParseDate(m.date)).ToList();
+                    break;
+
+                case 4: // Size
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => m.sizeBytes).ToList()
+                        : _virtualList.OrderByDescending(m => m.sizeBytes).ToList();
+                    break;
+
+                default:
+                    break;
+            }
+
+            // ★ VirtualMode の高速再描画
+            listMain.RedrawItems(0, _virtualList.Count - 1, true);
+        }
+
+        private DateTime ParseDate(string s)
+        {
+            if (DateTime.TryParse(s, out DateTime dt))
+                return dt;
+            return DateTime.MinValue;
         }
 
         private void toolFilterCombo_SelectedIndexChanged(object sender, EventArgs e)
@@ -2707,13 +2833,21 @@ namespace MizuMail
 
         private void listMain_ItemDrag(object sender, ItemDragEventArgs e)
         {
-            // 選択されているメールを全部集める
-            var mails = listMain.SelectedItems
-                .Cast<ListViewItem>()
-                .Select(item => (Mail)item.Tag)
-                .ToList();
+            // VirtualMode では SelectedItems は使えない
+            if (listMain.SelectedIndices.Count == 0)
+                return;
 
-            // 複数メールをまとめてドラッグデータにする
+            // ★ 選択されたメールを取得
+            var mails = listMain.SelectedIndices
+                                .Cast<int>()
+                                .Select(i => _virtualList[i])
+                                .Where(m => m != null)
+                                .ToList();
+
+            if (mails.Count == 0)
+                return;
+
+            // ★ ドラッグ開始（従来の処理）
             DoDragDrop(mails, DragDropEffects.Move);
         }
 
@@ -3209,7 +3343,7 @@ namespace MizuMail
                 string body = form.textMailBody.Text;
                 string cc = form.textMailCc.Text;
                 string bcc = form.textMailBcc.Text;
-                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(i => i.Text));
+                string atach = string.Join(";", form.buttonAttachList.DropDownItems.Cast<ToolStripItem>().Select(i => i.Tag?.ToString() ?? ""));
 
                 if (!string.IsNullOrEmpty(to) || !string.IsNullOrEmpty(body))
                 {
@@ -3245,6 +3379,7 @@ namespace MizuMail
                         SaveMail(mail);
                         // ★ Draft フォルダの一覧を更新
                         LoadEmlFolder(folderManager.Draft);
+                        treeMain.SelectedNode = folderNodeMap[folderManager.Draft];
                     }
                 }
             }
@@ -3320,8 +3455,6 @@ namespace MizuMail
             listMain.BeginUpdate();
             try
             {
-                listMain.Items.Clear();
-
                 // ★ ルートフォルダ用のカラム名に切り替え
                 listMain.Columns[1].Text = "メールボックス名";
                 listMain.Columns[2].Text = "メールアドレス";
@@ -3889,19 +4022,26 @@ namespace MizuMail
 
         private void menuRead_Click(object sender, EventArgs e)
         {
-            if (listMain.SelectedItems.Count == 0)
+            if (listMain.SelectedIndices.Count == 0)
                 return;
 
-            foreach (ListViewItem item in listMain.SelectedItems)
+            foreach (int index in listMain.SelectedIndices)
             {
-                if (item.Tag is Mail mail)
+                Mail mail = _virtualList[index];
+                if (mail != null && mail.notReadYet)
                 {
-                    if (mail.notReadYet)
-                        ToggleReadState(mail);
+                    ToggleReadState(mail);
                 }
             }
 
-            UpdateView();
+            // ★ VirtualMode では全体再描画ではなく、部分再描画が高速
+            listMain.RedrawItems(
+                listMain.SelectedIndices[0],
+                listMain.SelectedIndices[listMain.SelectedIndices.Count - 1],
+                true
+            );
+
+            UpdateMailView(); // 本文更新
         }
 
         private void ToggleReadState(Mail mail)
@@ -5110,10 +5250,13 @@ namespace MizuMail
 
         private void menuAttachmentFileAllSave_Click(object sender, EventArgs e)
         {
-            if (listMain.SelectedItems.Count == 0)
+            if (listMain.SelectedIndices.Count == 0)
                 return;
 
-            Mail mail = listMain.SelectedItems[0].Tag as Mail;
+            // ★ VirtualMode では SelectedItems を使わない
+            int index = listMain.SelectedIndices[0];
+            Mail mail = _virtualList[index];
+
             if (mail == null || mail.message == null)
                 return;
 
@@ -5143,7 +5286,8 @@ namespace MizuMail
                     }
                 }
 
-                MessageBox.Show("添付ファイルを保存しました。", "完了", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("添付ファイルを保存しました。", "完了",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -5404,7 +5548,8 @@ namespace MizuMail
 
         private void menuEditTags_Click(object sender, EventArgs e)
         {
-            if (currentMail == null) return;
+            if (currentMail == null)
+                return;
 
             using (var dlg = new FormTagEditor(currentMail.Labels))
             {
@@ -5420,33 +5565,113 @@ namespace MizuMail
                     tagUndoStack.Push(action);
                     tagRedoStack.Clear(); // Redo は無効化
 
+                    // ★ タグを更新
                     currentMail.Labels = dlg.ResultTags;
                     SaveMailLabels(currentMail);
-                    UpdateListView();
+
+                    // ★ VirtualMode の部分再描画（これだけで十分）
+                    int index = _virtualList.IndexOf(currentMail);
+                    if (index >= 0)
+                        listMain.RedrawItems(index, index, true);
+
+                    UpdateUndoState();
                 }
             }
         }
 
         private void menuUndoTags_Click(object sender, EventArgs e)
         {
-            if (tagUndoStack.Count == 0) return;
+            if (tagUndoStack.Count == 0)
+                return;
 
             var action = tagUndoStack.Pop();
+
+            // ★ Undo 実行（Mail.Labels を元に戻す）
             action.Undo();
+
+            // ★ Redo スタックへ積む
             tagRedoStack.Push(action);
 
-            UpdateListView();
+            // ★ VirtualMode の再描画
+            int index = _virtualList.IndexOf(action.Mail);
+            if (index >= 0)
+                listMain.RedrawItems(index, index, true);
+
+            UpdateUndoState();
         }
 
         private void menuRedoTags_Click(object sender, EventArgs e)
         {
-            if (tagRedoStack.Count == 0) return;
+            if (tagRedoStack.Count == 0)
+                return;
 
             var action = tagRedoStack.Pop();
+
+            // ★ Redo 実行（Mail.Labels を新しい状態に戻す）
             action.Redo();
+
+            // ★ Undo スタックへ戻す
             tagUndoStack.Push(action);
 
-            UpdateListView();
+            // ★ VirtualMode の再描画
+            int index = _virtualList.IndexOf(action.Mail);
+            if (index >= 0)
+                listMain.RedrawItems(index, index, true);
+
+            UpdateUndoState();
+        }
+
+
+        private void listMain_RetrieveVirtualItem(object sender, RetrieveVirtualItemEventArgs e)
+        {
+            try
+            {
+                if (_virtualList == null || e.ItemIndex < 0 || e.ItemIndex >= _virtualList.Count)
+                {
+                    e.Item = new ListViewItem(" ");
+                    return;
+                }
+
+                Mail mail = _virtualList[e.ItemIndex];
+                if (mail == null)
+                {
+                    e.Item = new ListViewItem(" ");
+                    return;
+                }
+
+                int iconIndex = GetMailIconIndex(mail);
+                var item = new ListViewItem(" ", iconIndex);
+
+                item.SubItems.Add(mail.from ?? mail.address ?? "");
+                item.SubItems.Add(mail.subject ?? "");
+                item.SubItems.Add(FormatReceivedDate(mail.date));
+                item.SubItems.Add(FormatSize(mail.sizeBytes));
+                item.SubItems.Add(mail.preview ?? "");
+                item.SubItems.Add(mail.Labels != null ? string.Join(", ", mail.Labels) : "");
+                item.SubItems.Add(mail.mailName ?? "");
+
+                //
+                // ★ 未読メールのスタイルを適用（VirtualMode ではここでしかできない）
+                //
+
+                item.Font = mail.notReadYet ? boldFont : listMain.Font;
+
+                if (mail.notReadYet)
+                {
+                    item.BackColor = Color.FromArgb(230, 245, 255);
+                }
+                else
+                {
+                    item.BackColor = listMain.BackColor;
+                }
+
+                e.Item = item;
+            }
+            catch (Exception ex)
+            {
+                logger.Error("RetrieveVirtualItem error: " + ex);
+                e.Item = new ListViewItem("ERR");
+            }
         }
     }
 }
