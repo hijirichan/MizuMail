@@ -1580,12 +1580,11 @@ namespace MizuMail
             }
         }
 
-        private void menuHelpVersionCheck_Click(object sender, EventArgs e)
+        private async void menuHelpVersionCheck_Click(object sender, EventArgs e)
         {
-            // バージョンチェックを行う
-            if (IsNewVersionAvailable())
+            if (await IsNewVersionAvailableAsync())
             {
-                MessageBox.Show("新しいバージョンが利用可能です。\nhttps://www.angel-teatime.com/ からダウンロードしてください。", "バージョンチェック", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("新しいバージョンが利用可能です。\nhttps://www.angel-teatime.com/からダウンロードしてください。", "バージョンチェック", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -1593,23 +1592,20 @@ namespace MizuMail
             }
         }
 
-        public static bool IsNewVersionAvailable()
+        private static readonly HttpClient http = new HttpClient();
+
+        public static async Task<bool> IsNewVersionAvailableAsync()
         {
             try
             {
                 string url = "https://www.angel-teatime.com/files/mizumail/mizumail_version.txt";
-
-                using (var client = new WebClient())
-                {
-                    string versionText = client.DownloadString(url).Trim();
-                    Version serverVersion = new Version(versionText);
-                    Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
-                    return serverVersion > currentVersion;
-                }
+                string versionText = (await http.GetStringAsync(url)).Trim();
+                Version serverVersion = new Version(versionText);
+                Version currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                return serverVersion > currentVersion;
             }
             catch
             {
-                // 通信エラーなどは false 扱い
                 return false;
             }
         }
@@ -2014,54 +2010,66 @@ namespace MizuMail
         // 音声読み上げの準備
         private SpeechSynthesizer synth = new SpeechSynthesizer();
 
+        // HttpClient は使い回す（現代的）
+        private static readonly HttpClient client = new HttpClient();
+
         private async void menuSpeechMail_Click(object sender, EventArgs e)
         {
-            // 選択中のメールを音声で読み上げる
-            if (currentMail != null)
+            if (currentMail == null)
+                return;
+
+            string toSpeak = $"件名: {currentMail.subject}。差出人: {currentMail.from}。本文: {currentMail.body}";
+
+            try
             {
-                string toSpeak = $"件名: {currentMail.subject}。差出人: {currentMail.from}。本文: {currentMail.body}";
-                try
+                if (await IsVoiceVoxRunning())
                 {
-                    if (await IsVoiceVoxRunning())
-                    {
-                        await SpeakWithVoiceVox(toSpeak, 2);
-                    }
-                    else
-                    {
-                        synth.SpeakAsync(toSpeak);
-                    }
+                    await SpeakWithVoiceVox(toSpeak, 2);
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.Debug($"出力エラー:{ex.Message}");
+                    synth.SpeakAsync(toSpeak);
                 }
             }
+            catch (Exception ex)
+            {
+                logger.Debug($"読み上げエラー: {ex.Message}");
+            }
         }
-
-        private static readonly HttpClient client = new HttpClient();
 
         public async Task SpeakWithVoiceVox(string text, int speakerId = 2)
         {
             // 1. audio_query
-            var query = await client.PostAsync($"http://127.0.0.1:50021/audio_query?text={Uri.EscapeDataString(text)}&speaker={speakerId}", null);
+            var query = await client.PostAsync(
+                $"http://127.0.0.1:50021/audio_query?text={Uri.EscapeDataString(text)}&speaker={speakerId}",
+                null);
+
+            query.EnsureSuccessStatusCode();
+
             var queryJson = await query.Content.ReadAsStringAsync();
 
-            // speedScale を上げて高速化
-            dynamic queryObj = Newtonsoft.Json.JsonConvert.DeserializeObject(queryJson);
-            queryObj.speedScale = 1.3;
-            queryJson = Newtonsoft.Json.JsonConvert.SerializeObject(queryObj);
+            // JObject を使う（dynamic より現代的で安全）
+            var obj = Newtonsoft.Json.Linq.JObject.Parse(queryJson);
+            obj["speedScale"] = 1.3;   // 読み上げ速度調整
+            queryJson = obj.ToString();
 
             // 2. synthesis
-            var audio = await client.PostAsync($"http://127.0.0.1:50021/synthesis?speaker={speakerId}", new StringContent(queryJson, Encoding.UTF8, "application/json"));
+            var audio = await client.PostAsync(
+                $"http://127.0.0.1:50021/synthesis?speaker={speakerId}",
+                new StringContent(queryJson, Encoding.UTF8, "application/json"));
 
-            // 3. WAV 再生（MemoryStream で高速化）
-            var stream = await audio.Content.ReadAsStreamAsync();
-            var mem = new MemoryStream();
-            await stream.CopyToAsync(mem);
-            mem.Position = 0;
+            audio.EnsureSuccessStatusCode();
 
-            var player = new SoundPlayer(mem);
-            player.Play();
+            // 3. WAV 再生（MemoryStream）
+            using (var stream = await audio.Content.ReadAsStreamAsync())
+            using (var mem = new MemoryStream())
+            {
+                await stream.CopyToAsync(mem);
+                mem.Position = 0;
+
+                var player = new SoundPlayer(mem);
+                player.Play();
+            }
         }
 
         private async Task<bool> IsVoiceVoxRunning()
@@ -4231,7 +4239,7 @@ namespace MizuMail
                 {
                     if (rule.UseRegex)
                     {
-                        if (Regex.IsMatch(subject, rule.Contains, RegexOptions.IgnoreCase))
+                        if (Regex.IsMatch(subject, rule.Contains, RegexOptions.IgnoreCase | RegexOptions.Compiled))
                             match = true;
                     }
                     else
@@ -4248,8 +4256,8 @@ namespace MizuMail
                 {
                     if (rule.UseRegex)
                     {
-                        if (Regex.IsMatch(fromFull, rule.From, RegexOptions.IgnoreCase) ||
-                            Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
+                        if (Regex.IsMatch(fromFull, rule.From, RegexOptions.IgnoreCase | RegexOptions.Compiled) ||
+                            Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase | RegexOptions.Compiled))
                             match = true;
                     }
                     else
