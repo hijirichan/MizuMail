@@ -42,6 +42,7 @@
             this.columnHeaderContains = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderFrom = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderMoveTo = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeaderLabel = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.buttonAdd = new System.Windows.Forms.Button();
             this.buttonEdit = new System.Windows.Forms.Button();
             this.buttonDelete = new System.Windows.Forms.Button();
@@ -56,14 +57,15 @@
             this.columnHeaderRegex,
             this.columnHeaderContains,
             this.columnHeaderFrom,
-            this.columnHeaderMoveTo});
+            this.columnHeaderMoveTo,
+            this.columnHeaderLabel});
             this.listViewRules.FullRowSelect = true;
             this.listViewRules.GridLines = true;
             this.listViewRules.HideSelection = false;
             this.listViewRules.Location = new System.Drawing.Point(14, 12);
             this.listViewRules.MultiSelect = false;
             this.listViewRules.Name = "listViewRules";
-            this.listViewRules.Size = new System.Drawing.Size(689, 260);
+            this.listViewRules.Size = new System.Drawing.Size(776, 260);
             this.listViewRules.TabIndex = 0;
             this.listViewRules.UseCompatibleStateImageBehavior = false;
             this.listViewRules.View = System.Windows.Forms.View.Details;
@@ -87,6 +89,11 @@
             // 
             this.columnHeaderMoveTo.Text = "移動先フォルダ";
             this.columnHeaderMoveTo.Width = 153;
+            // 
+            // columnHeaderLabel
+            // 
+            this.columnHeaderLabel.Text = "タグ";
+            this.columnHeaderLabel.Width = 100;
             // 
             // buttonAdd
             // 
@@ -121,7 +128,7 @@
             // buttonOK
             // 
             this.buttonOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.buttonOK.Location = new System.Drawing.Point(525, 280);
+            this.buttonOK.Location = new System.Drawing.Point(612, 280);
             this.buttonOK.Name = "buttonOK";
             this.buttonOK.Size = new System.Drawing.Size(86, 30);
             this.buttonOK.TabIndex = 4;
@@ -132,7 +139,7 @@
             // buttonCancel
             // 
             this.buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.buttonCancel.Location = new System.Drawing.Point(617, 280);
+            this.buttonCancel.Location = new System.Drawing.Point(704, 280);
             this.buttonCancel.Name = "buttonCancel";
             this.buttonCancel.Size = new System.Drawing.Size(86, 30);
             this.buttonCancel.TabIndex = 5;
@@ -143,7 +150,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(715, 321);
+            this.ClientSize = new System.Drawing.Size(802, 321);
             this.Controls.Add(this.buttonCancel);
             this.Controls.Add(this.buttonOK);
             this.Controls.Add(this.buttonDelete);
@@ -163,5 +170,6 @@
         #endregion
 
         private System.Windows.Forms.ColumnHeader columnHeaderRegex;
+        private System.Windows.Forms.ColumnHeader columnHeaderLabel;
     }
 }

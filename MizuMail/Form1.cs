@@ -1712,11 +1712,11 @@ namespace MizuMail
                         // ★ ここが絶対に必要（今回の NullReference の原因）
                         mail.Folder = folderManager.Inbox;
 
+                        // 振り分け処理
+                        ApplyRulesForNewMail(mail);
+
                         // ★ mailCache に登録（必須）
                         mailCache[inboxPath] = mail;
-
-                        // 振り分け処理
-                        ApplyRules(mail);
 
                         // 変更のあったフォルダを登録
                         updatedFolders.Add(mail.Folder);
@@ -1866,11 +1866,11 @@ namespace MizuMail
                         // ★ ここが絶対に必要（今回の NullReference の原因）
                         mail.Folder = folderManager.Inbox;
 
+                        // 振り分け処理
+                        ApplyRulesForNewMail(mail);
+
                         // ★ mailCache に登録（必須）
                         mailCache[inboxPath] = mail;
-
-                        // 振り分け処理
-                        ApplyRules(mail);
 
                         // 変更のあったフォルダを登録
                         updatedFolders.Add(mail.Folder);
@@ -2176,6 +2176,18 @@ namespace MizuMail
                     _virtualList = sortAscending
                         ? _virtualList.OrderBy(m => m.sizeBytes).ToList()
                         : _virtualList.OrderByDescending(m => m.sizeBytes).ToList();
+                    break;
+
+                case 5: // プレビュー
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => m.preview).ToList()
+                        : _virtualList.OrderByDescending(m => m.preview).ToList();
+                    break;
+
+                case 6: // タグ（ラベル）
+                    _virtualList = sortAscending
+                        ? _virtualList.OrderBy(m => string.Join(", ", m.Labels)).ToList()
+                        : _virtualList.OrderByDescending(m => string.Join(", ", m.Labels)).ToList();
                     break;
 
                 default:
@@ -2909,6 +2921,9 @@ namespace MizuMail
                     {
                         mail.Labels = new List<string>();
                     }
+
+                    // ★ ここで ApplyRules を呼ぶ（最適）
+                    ApplyLabelRules(mail);
 
                     LoadMailCache(mail);
 
@@ -4114,7 +4129,7 @@ namespace MizuMail
             }
         }
 
-        private void ApplyRules(Mail mail)
+        private void ApplyRulesForNewMail(Mail mail)
         {
             if (rules == null || rules.Count == 0)
                 return;
@@ -4122,14 +4137,9 @@ namespace MizuMail
             string subject = mail.subject ?? "";
             string from = mail.from ?? "";
 
-            // ★ メールアドレス部分だけ抽出
-            string fromAddress = from;
-            int lt = fromAddress.IndexOf('<');
-            int gt = fromAddress.IndexOf('>');
-            if (lt >= 0 && gt > lt)
-                fromAddress = fromAddress.Substring(lt + 1, gt - lt - 1);
+            // メールアドレス抽出
+            string fromAddress = ExtractAddress(from);
 
-            // ★ 移動前のパスを保存（mailCache 更新に必須）
             string oldPath = mail.mailPath;
 
             foreach (var rule in rules)
@@ -4151,48 +4161,125 @@ namespace MizuMail
                     }
                 }
 
-                // 差出人
+                // 差出人（表示名＋アドレス両方を対象にする）
+                string fromFull = mail.from ?? "";
+
                 if (!string.IsNullOrWhiteSpace(rule.From))
                 {
                     if (rule.UseRegex)
                     {
-                        if (Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
+                        if (Regex.IsMatch(fromFull, rule.From, RegexOptions.IgnoreCase) ||
+                            Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
                             match = true;
                     }
                     else
                     {
-                        if (fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
+                        if (fromFull.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
                             match = true;
                     }
                 }
 
-                // ★ なりすまし防止（最優先）
+                // ★ なりすまし防止（新着メールのみ）
                 if (IsSuspiciousSender(mail))
                 {
                     MoveMailWithUndo(mail, folderManager.Spam);
-
-                    // ★ mailCache 更新
                     UpdateMailCacheAfterMove(oldPath, mail);
-
                     return;
                 }
 
                 if (!match)
                     continue;
 
+                // ★ ラベル付与
+                if (!string.IsNullOrWhiteSpace(rule.Label))
+                {
+                    if (!mail.Labels.Contains(rule.Label))
+                        mail.Labels.Add(rule.Label);
+                }
+
                 // ★ 移動先フォルダ
-                MailFolder target = folderManager.GetOrCreateFolderByPath(rule.MoveTo);
-                if (target == null)
-                    return;
+                if (!string.IsNullOrWhiteSpace(rule.MoveTo))
+                {
+                    MailFolder target = folderManager.GetOrCreateFolderByPath(rule.MoveTo);
+                    if (target != null)
+                    {
+                        MoveMailWithUndo(mail, target);
+                        UpdateMailCacheAfterMove(oldPath, mail);
+                    }
+                }
 
-                // ★ 正式な移動処理
-                MoveMailWithUndo(mail, target);
-
-                // ★ mailCache 更新
-                UpdateMailCacheAfterMove(oldPath, mail);
-
-                break; // 最初に一致したルールだけ適用
+                break; // 最初の一致だけ適用
             }
+        }
+
+        private void ApplyLabelRules(Mail mail)
+        {
+            if (rules == null || rules.Count == 0)
+                return;
+
+            string subject = mail.subject ?? "";
+            string from = mail.from ?? "";
+            string fromAddress = ExtractAddress(from);
+
+            foreach (var rule in rules)
+            {
+                bool match = false;
+
+                // 件名
+                if (!string.IsNullOrWhiteSpace(rule.Contains))
+                {
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(subject, rule.Contains, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (subject.IndexOf(rule.Contains, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
+                }
+
+                // 差出人（表示名＋アドレス両方を対象にする）
+                string fromFull = mail.from ?? "";
+
+                if (!string.IsNullOrWhiteSpace(rule.From))
+                {
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(fromFull, rule.From, RegexOptions.IgnoreCase) ||
+                            Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (fromFull.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
+                }
+
+                if (!match)
+                    continue;
+
+                // ★ ラベル付与のみ
+                if (!string.IsNullOrWhiteSpace(rule.Label))
+                {
+                    if (!mail.Labels.Contains(rule.Label))
+                        mail.Labels.Add(rule.Label);
+                }
+            }
+        }
+
+        private string ExtractAddress(string from)
+        {
+            string addr = from ?? "";
+            int lt = addr.IndexOf('<');
+            int gt = addr.IndexOf('>');
+            if (lt >= 0 && gt > lt)
+                return addr.Substring(lt + 1, gt - lt - 1);
+            return addr;
         }
 
         private void UpdateMailCacheAfterMove(string oldPath, Mail mail)
@@ -4742,7 +4829,7 @@ namespace MizuMail
 
             foreach (var mail in mails)
             {
-                ApplyRules(mail);  // ← 受信時と同じルールを適用
+                ApplyLabelRules(mail);  // ← ラベル付与のルールを適用
             }
         }
 

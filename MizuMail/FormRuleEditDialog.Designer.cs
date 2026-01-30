@@ -47,6 +47,8 @@
             this.buttonCancel = new System.Windows.Forms.Button();
             this.buttonSelectFolder = new System.Windows.Forms.Button();
             this.checkUseRegex = new System.Windows.Forms.CheckBox();
+            this.textLabel = new System.Windows.Forms.TextBox();
+            this.label4 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -99,7 +101,7 @@
             // 
             // buttonOK
             // 
-            this.buttonOK.Location = new System.Drawing.Point(325, 145);
+            this.buttonOK.Location = new System.Drawing.Point(325, 182);
             this.buttonOK.Name = "buttonOK";
             this.buttonOK.Size = new System.Drawing.Size(86, 30);
             this.buttonOK.TabIndex = 1;
@@ -110,7 +112,7 @@
             // buttonCancel
             // 
             this.buttonCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.buttonCancel.Location = new System.Drawing.Point(417, 145);
+            this.buttonCancel.Location = new System.Drawing.Point(417, 182);
             this.buttonCancel.Name = "buttonCancel";
             this.buttonCancel.Size = new System.Drawing.Size(86, 30);
             this.buttonCancel.TabIndex = 0;
@@ -129,18 +131,36 @@
             // checkUseRegex
             // 
             this.checkUseRegex.AutoSize = true;
-            this.checkUseRegex.Location = new System.Drawing.Point(137, 120);
+            this.checkUseRegex.Location = new System.Drawing.Point(137, 157);
             this.checkUseRegex.Name = "checkUseRegex";
             this.checkUseRegex.Size = new System.Drawing.Size(154, 19);
             this.checkUseRegex.TabIndex = 8;
             this.checkUseRegex.Text = "正規表現を使用する";
             this.checkUseRegex.UseVisualStyleBackColor = true;
             // 
+            // textLabel
+            // 
+            this.textLabel.Location = new System.Drawing.Point(137, 120);
+            this.textLabel.Name = "textLabel";
+            this.textLabel.Size = new System.Drawing.Size(366, 22);
+            this.textLabel.TabIndex = 9;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(14, 123);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(29, 15);
+            this.label4.TabIndex = 10;
+            this.label4.Text = "タグ";
+            // 
             // FormRuleEditDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(519, 184);
+            this.ClientSize = new System.Drawing.Size(519, 226);
+            this.Controls.Add(this.textLabel);
+            this.Controls.Add(this.label4);
             this.Controls.Add(this.checkUseRegex);
             this.Controls.Add(this.buttonSelectFolder);
             this.Controls.Add(this.buttonCancel);
@@ -165,5 +185,7 @@
         #endregion
 
         private System.Windows.Forms.CheckBox checkUseRegex;
+        private System.Windows.Forms.TextBox textLabel;
+        private System.Windows.Forms.Label label4;
     }
 }

@@ -26,6 +26,7 @@ namespace MizuMail
             textContains.Text = rule.Contains;
             textFrom.Text = rule.From;
             textMoveTo.Text = rule.MoveTo;
+            textLabel.Text = rule.Label;
             checkUseRegex.Checked = rule.UseRegex;
         }
 
@@ -34,6 +35,7 @@ namespace MizuMail
             Rule.Contains = textContains.Text.Trim();
             Rule.From = textFrom.Text.Trim();
             Rule.MoveTo = textMoveTo.Text.Trim();
+            Rule.Label = textLabel.Text.Trim();
             Rule.UseRegex = checkUseRegex.Checked;
 
             DialogResult = DialogResult.OK;

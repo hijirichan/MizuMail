@@ -24,7 +24,8 @@ namespace MizuMail
                 UseRegex = r.UseRegex,
                 Contains = r.Contains,
                 From = r.From,
-                MoveTo = r.MoveTo
+                MoveTo = r.MoveTo,
+                Label = r.Label
             }).ToList();
 
             LoadList();
@@ -41,6 +42,7 @@ namespace MizuMail
                 item.SubItems.Add(r.Contains);
                 item.SubItems.Add(r.From);
                 item.SubItems.Add(r.MoveTo);
+                item.SubItems.Add(r.Label);
                 item.Tag = r;
 
                 listViewRules.Items.Add(item);
@@ -95,6 +97,7 @@ namespace MizuMail
                 rule.Contains = item.SubItems[1].Text;
                 rule.From = item.SubItems[2].Text;
                 rule.MoveTo = item.SubItems[3].Text;
+                rule.Label = item.SubItems[4].Text;
 
                 Rules.Add(rule);
             }
