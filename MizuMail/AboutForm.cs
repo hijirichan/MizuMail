@@ -34,8 +34,8 @@ namespace MizuMail
 
         private void AboutForm_Load(object sender, EventArgs e)
         {
-            labelAppName.Text = System.Windows.Forms.Application.ProductName + " Version " + System.Windows.Forms.Application.ProductVersion;
-            labelCopyright.Text = "Copyright (C) 2026 " + System.Windows.Forms.Application.CompanyName;
+            labelAppName.Text = Application.ProductName + " Version " + Application.ProductVersion;
+            labelCopyright.Text = "Copyright (C) 2026 " + Application.CompanyName;
         }
     }
 }

@@ -1,22 +1,14 @@
 ﻿using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Pop3;
-using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Win32;
 using MimeKit;
-using MimeKit.Encodings;
 using MimeKit.Text;
 using Newtonsoft.Json;
 using NLog;
-using NLog.Filters;
-using NLog.Targets;
-using Org.BouncyCastle.Asn1.X509;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -32,12 +24,8 @@ using System.Security.Cryptography;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static Org.BouncyCastle.Tls.Certificate;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MizuMail
 {
@@ -48,9 +36,6 @@ namespace MizuMail
 
         // メールボックス情報を表示しているときのフラグ
         public bool mailBoxViewFlag = false;
-
-        // ListViewItemSorterに指定するフィールド
-        public ListViewItemComparer listViewItemSorter;
 
         // 現在の検索キーワードを格納するフィールド
         private string currentKeyword = "";
@@ -87,147 +72,6 @@ namespace MizuMail
         // ロガーの取得
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        /// <summary>
-        /// ListViewの項目の並び替えに使用するクラス
-        /// </summary>
-        public class ListViewItemComparer : System.Collections.IComparer
-        {
-
-            public static ListViewItemComparer Default
-            {
-                get { return _default; }
-            }
-
-            static ListViewItemComparer()
-            {
-                _default = new ListViewItemComparer
-                {
-                    Column = 3,
-                    Order = SortOrder.Descending,
-                    ColumnModes = new[] { ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.DateTime, ComparerMode.String, ComparerMode.String, ComparerMode.String, ComparerMode.String }
-                };
-            }
-
-            /// <summary>
-            /// 比較する方法
-            /// </summary>
-            public enum ComparerMode
-            {
-                String,
-                Integer,
-                DateTime
-            };
-
-            private int _column;
-            private static ListViewItemComparer _default;
-
-            /// <summary>
-            /// 並び替えるListView列の番号
-            /// </summary>
-            public int Column
-            {
-                get { return _column; }
-                set { _column = value; }
-            }
-
-            /// <summary>
-            /// 昇順か降順か
-            /// </summary>
-            public SortOrder Order { get; set; }
-
-            /// <summary>
-            /// 並び替えの方法
-            /// </summary>
-            public ComparerMode Mode { get; private set; }
-
-            /// <summary>
-            /// 列ごとの並び替えの方法
-            /// </summary>
-            public ComparerMode[] ColumnModes { get; set; }
-
-            /// <summary>
-            /// ListViewItemComparerクラスのコンストラクタ
-            /// </summary>
-            /// <param name="col">並び替える列番号</param>
-            /// <param name="ord">昇順か降順か</param>
-            /// <param name="cmod">並び替えの方法</param>
-            public ListViewItemComparer(int col, SortOrder ord, ComparerMode cmod)
-            {
-                _column = col;
-                Order = ord;
-                Mode = cmod;
-            }
-
-            public ListViewItemComparer()
-            {
-                _column = 0;
-                Order = SortOrder.Ascending;
-                Mode = ComparerMode.String;
-            }
-
-            // xがyより小さいときはマイナスの数、大きいときはプラスの数、
-            // 同じときは0を返す
-            public int Compare(object x, object y)
-            {
-                int result = 0;
-
-                // ListViewItemの取得
-                ListViewItem itemx = (ListViewItem)x;
-                ListViewItem itemy = (ListViewItem)y;
-
-                //並べ替えの方法を決定
-                if (ColumnModes != null && ColumnModes.Length > _column)
-                    Mode = ColumnModes[_column];
-
-                // 並び替えの方法別に、xとyを比較する
-                switch (Mode)
-                {
-                    case ComparerMode.String:
-                        result = string.Compare(itemx.SubItems[_column].Text,
-                            itemy.SubItems[_column].Text);
-                        break;
-                    case ComparerMode.Integer:
-                        result = int.Parse(itemx.SubItems[_column].Text) -
-                            int.Parse(itemy.SubItems[_column].Text);
-                        break;
-                    case ComparerMode.DateTime:
-                        DateTime dx, dy;
-                        bool okx = TryParseListViewDate(itemx.SubItems[_column].Text, out dx);
-                        bool oky = TryParseListViewDate(itemy.SubItems[_column].Text, out dy);
-
-                        if (!okx && !oky)
-                        {
-                            // どちらもパース不能 → 文字列比較にフォールバック
-                            result = string.Compare(itemx.SubItems[_column].Text, itemy.SubItems[_column].Text);
-                        }
-                        else if (!okx)
-                        {
-                            // x だけ無効 → 後ろに回す（好みで逆にしてもOK）
-                            result = 1;
-                        }
-                        else if (!oky)
-                        {
-                            // y だけ無効
-                            result = -1;
-                        }
-                        else
-                        {
-                            result = DateTime.Compare(dx, dy);
-                        }
-                        break;
-                }
-
-                // 降順の時は結果を+-逆にする
-                if (Order == SortOrder.Descending)
-                    result = -result;
-                else if (Order == SortOrder.None)
-                    result = 0;
-
-                // 結果を返す
-                return result;
-            }
-        }
-
         public FormMain()
         {
             // ★ WebView2 Runtime チェック
@@ -253,10 +97,8 @@ namespace MizuMail
             // 初期化
             currentMail = null;
 
-            System.Windows.Forms.Application.Idle += Application_Idle;
+            Application.Idle += Application_Idle;
             listMain.SmallImageList = new ImageList { ImageSize = new Size(1, 20) };
-            listViewItemSorter = ListViewItemComparer.Default;
-            listMain.ListViewItemSorter = listViewItemSorter;
             listMain.VirtualMode = true;
             listMain.RetrieveVirtualItem += listMain_RetrieveVirtualItem;
         }
@@ -321,7 +163,6 @@ namespace MizuMail
 
             UpdateTreeView();
             UpdateListView();
-            listMain.ListViewItemSorter = listViewItemSorter;
 
             UpdateUndoState();
         }
@@ -1135,7 +976,7 @@ namespace MizuMail
 
         private void menuAppExit_Click(object sender, EventArgs e)
         {
-            System.Windows.Forms.Application.Exit();
+            Application.Exit();
         }
 
         private void timerMain_Tick(object sender, EventArgs e)
@@ -1218,10 +1059,10 @@ namespace MizuMail
             Mail.receiveMethod_Pop3 = true;
 
             // 環境設定ファイルが存在する場合は環境設定情報を読み込んでアカウント情報に設定する
-            if (File.Exists(System.Windows.Forms.Application.StartupPath + @"\MizuMail.xml"))
+            if (File.Exists(Application.StartupPath + @"\MizuMail.xml"))
             {
                 var serializer = new System.Xml.Serialization.XmlSerializer(typeof(MailSettings));
-                using (var fs = new FileStream(System.Windows.Forms.Application.StartupPath + @"\MizuMail.xml", FileMode.Open))
+                using (var fs = new FileStream(Application.StartupPath + @"\MizuMail.xml", FileMode.Open))
                 {
                     MailSetting = (MailSettings)serializer.Deserialize(fs);
                 }
@@ -1309,7 +1150,7 @@ namespace MizuMail
 
             System.Xml.Serialization.XmlSerializer serializer = new System.Xml.Serialization.XmlSerializer(typeof(MailSettings));
 
-            using (var fs = new FileStream(System.Windows.Forms.Application.StartupPath + @"\MizuMail.xml", FileMode.Create))
+            using (var fs = new FileStream(Application.StartupPath + @"\MizuMail.xml", FileMode.Create))
             {
                 serializer.Serialize(fs, MailSetting);
             }
@@ -1361,7 +1202,7 @@ namespace MizuMail
                 return;
             }
 
-            string tempDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "tmp");
+            string tempDir = Path.Combine(Application.StartupPath, "mbox", "tmp");
             Directory.CreateDirectory(tempDir);
 
             // ★ ユニークな一時ファイル名
@@ -2287,9 +2128,6 @@ namespace MizuMail
             UpdateMailView();
         }
 
-        private int _sortColumn = -1;
-        private bool _sortAscending = true;
-
         private void listMain_ColumnClick(object sender, ColumnClickEventArgs e)
         {
             if (sortColumn == e.Column)
@@ -2477,7 +2315,7 @@ namespace MizuMail
         {
             try
             {
-                string helpPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "help", "MizuMail.html");
+                string helpPath = Path.Combine(Application.StartupPath, "help", "MizuMail.html");
 
                 if (File.Exists(helpPath))
                 {
@@ -2593,7 +2431,7 @@ namespace MizuMail
                 message.Headers["X-MizuMail-Draft"] = mail.isDraft ? "1" : "0";
 
                 // X-Mailer
-                message.Headers.Add("X-Mailer", "MizuMail " + System.Windows.Forms.Application.ProductVersion);
+                message.Headers.Add("X-Mailer", "MizuMail " + Application.ProductVersion);
 
                 // 保存
                 Directory.CreateDirectory(mail.Folder.FullPath);
@@ -3245,13 +3083,13 @@ namespace MizuMail
 
         private void DeleteInboxSubFolder(string folderName)
         {
-            string folderPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "inbox", folderName);
+            string folderPath = Path.Combine(Application.StartupPath, "mbox", "inbox", folderName);
 
             if (!Directory.Exists(folderPath))
                 return;
 
             // ★ ごみ箱フォルダ
-            string trashDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trash");
+            string trashDir = Path.Combine(Application.StartupPath, "mbox", "trash");
             Directory.CreateDirectory(trashDir);
 
             // ★ フォルダ内の .eml をすべてごみ箱へ移動
@@ -3276,13 +3114,13 @@ namespace MizuMail
 
         private void DeleteFolderRecursive(string folder)
         {
-            string folderPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", folder.Replace("/", "\\"));
+            string folderPath = Path.Combine(Application.StartupPath, "mbox", folder.Replace("/", "\\"));
 
             if (!Directory.Exists(folderPath))
                 return;
 
             // ごみ箱フォルダ
-            string trashDir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "trash");
+            string trashDir = Path.Combine(Application.StartupPath, "mbox", "trash");
             Directory.CreateDirectory(trashDir);
 
             // ★ .eml をすべてごみ箱へ移動
@@ -3410,7 +3248,7 @@ namespace MizuMail
             string newFolder = parentFolder + "/" + newName;
 
             // ★ ディレクトリ作成
-            string dir = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", newFolder.Replace("/", "\\"));
+            string dir = Path.Combine(Application.StartupPath, "mbox", newFolder.Replace("/", "\\"));
             if (Directory.Exists(dir))
             {
                 MessageBox.Show("同じ名前のフォルダが既に存在します。");
@@ -3471,12 +3309,12 @@ namespace MizuMail
                 item.SubItems.Add(Mail.userAddress);   // メールアドレス
 
                 // 更新日時
-                string inboxPath = Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox", "inbox");
+                string inboxPath = Path.Combine(Application.StartupPath, "mbox", "inbox");
                 item.SubItems.Add(Directory.GetLastWriteTime(inboxPath).ToString("yyyy/MM/dd HH:mm:ss"));
 
                 // サイズ
                 long directorySize = 0;
-                GetDirectorySize(Path.Combine(System.Windows.Forms.Application.StartupPath, "mbox"), ref directorySize);
+                GetDirectorySize(Path.Combine(Application.StartupPath, "mbox"), ref directorySize);
                 item.SubItems.Add(FormatSize(directorySize));
 
                 // 使わない列は空文字で埋める
@@ -3929,14 +3767,14 @@ namespace MizuMail
 
         private void LoadUidls()
         {
-            string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "uidl.txt");
+            string path = Path.Combine(Application.StartupPath, "uidl.txt");
             if (File.Exists(path))
                 localUidls = File.ReadAllLines(path).ToList();
         }
 
         private void SaveUidls()
         {
-            string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "uidl.txt");
+            string path = Path.Combine(Application.StartupPath, "uidl.txt");
             File.WriteAllLines(path, localUidls);
         }
 
@@ -4263,13 +4101,13 @@ namespace MizuMail
 
         private void SaveRules()
         {
-            string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "rules.json");
+            string path = Path.Combine(Application.StartupPath, "rules.json");
             File.WriteAllText(path, JsonConvert.SerializeObject(rules, Formatting.Indented));
         }
 
         private void LoadRules()
         {
-            string path = Path.Combine(System.Windows.Forms.Application.StartupPath, "rules.json");
+            string path = Path.Combine(Application.StartupPath, "rules.json");
             if (File.Exists(path))
             {
                 rules = JsonConvert.DeserializeObject<List<MailRule>>(File.ReadAllText(path));
