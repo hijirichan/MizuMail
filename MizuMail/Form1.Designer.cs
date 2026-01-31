@@ -60,7 +60,7 @@ namespace MizuMail
             this.menuMailDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.設定SToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAccountSetting = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuReleEdit = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuRuleEdit = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSignatureSetting = new System.Windows.Forms.ToolStripMenuItem();
             this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLocalFiltter = new System.Windows.Forms.ToolStripMenuItem();
@@ -288,7 +288,7 @@ namespace MizuMail
             // 
             this.設定SToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.menuAccountSetting,
-            this.menuReleEdit,
+            this.menuRuleEdit,
             this.menuSignatureSetting});
             this.設定SToolStripMenuItem.Name = "設定SToolStripMenuItem";
             this.設定SToolStripMenuItem.Size = new System.Drawing.Size(71, 24);
@@ -297,22 +297,22 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
             // 
-            // menuReleEdit
+            // menuRuleEdit
             // 
-            this.menuReleEdit.Name = "menuReleEdit";
-            this.menuReleEdit.Size = new System.Drawing.Size(212, 26);
-            this.menuReleEdit.Text = "振り分け設定(&R)";
-            this.menuReleEdit.Click += new System.EventHandler(this.menuReleEdit_Click);
+            this.menuRuleEdit.Name = "menuRuleEdit";
+            this.menuRuleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuRuleEdit.Text = "振り分け設定(&R)";
+            this.menuRuleEdit.Click += new System.EventHandler(this.menuRuleEdit_Click);
             // 
             // menuSignatureSetting
             // 
             this.menuSignatureSetting.Name = "menuSignatureSetting";
-            this.menuSignatureSetting.Size = new System.Drawing.Size(212, 26);
+            this.menuSignatureSetting.Size = new System.Drawing.Size(224, 26);
             this.menuSignatureSetting.Text = "署名の設定(&S)";
             this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
             // 
@@ -1040,7 +1040,7 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuRenameFolder;
         private System.Windows.Forms.ToolStripMenuItem menuRead;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
-        private System.Windows.Forms.ToolStripMenuItem menuReleEdit;
+        private System.Windows.Forms.ToolStripMenuItem menuRuleEdit;
         private Microsoft.Web.WebView2.WinForms.WebView2 browserMail;
         private System.Windows.Forms.ToolStripMenuItem ツールTToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem menuLocalFiltter;

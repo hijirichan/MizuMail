@@ -1076,9 +1076,7 @@ namespace MizuMail
             if (fileName == null)
                 return;
 
-            var message = MimeMessage.Load(mail.mailPath);
-
-            var part = FindAttachments(message.Body)
+            var part = FindAttachments(mail.message.Body)
                 .FirstOrDefault(p =>
                     string.Equals(GetAttachmentName(p), fileName, StringComparison.OrdinalIgnoreCase));
 
@@ -1533,7 +1531,7 @@ namespace MizuMail
             int mailCount = 0;
             string prevFolderPath = (treeMain.SelectedNode?.Tag as MailFolder)?.FullPath;
 
-            updatedFolders.Clear();   // ★★★ 最重要：毎回クリア
+            updatedFolders.Clear();
 
             try
             {
@@ -1549,18 +1547,27 @@ namespace MizuMail
                     labelMessage.Text = $"{total}件のメッセージがあります";
                     statusStrip1.Refresh();
 
-                    toolMailProgress.Visible = true;
-
+                    // ★ 新規 UIDL の抽出
+                    var newUidls = new List<(int index, string uidl)>();
                     for (int i = 0; i < total; i++)
                     {
-                        toolMailProgress.Value = (int)((i + 1) * 100.0 / total);
-                        statusStrip1.Refresh();
-
                         string uidl = client.GetMessageUid(i);
-                        if (localUidls.Contains(uidl))
-                            continue;
+                        if (!localUidls.Contains(uidl))
+                            newUidls.Add((i, uidl));
+                    }
 
-                        labelMessage.Text = $"{i + 1}件目のメール受信中";
+                    int totalToReceive = newUidls.Count;
+
+                    toolMailProgress.Visible = true;
+                    toolMailProgress.Maximum = Math.Max(1, totalToReceive);
+                    toolMailProgress.Value = 0;
+
+                    int progress = 0;
+
+                    // ★ 新規メールだけ受信
+                    foreach (var (i, uidl) in newUidls)
+                    {
+                        labelMessage.Text = $"{progress + 1}/{totalToReceive} 件目のメール受信中";
                         statusStrip1.Refresh();
 
                         var message = await client.GetMessageAsync(i);
@@ -1596,6 +1603,10 @@ namespace MizuMail
                         localUidls.Add(uidl);
                         mailCount++;
 
+                        progress++;
+                        if (progress <= toolMailProgress.Maximum)
+                            toolMailProgress.Value = progress;
+
                         if (Mail.deleteMail)
                             await client.DeleteMessageAsync(i);
                     }
@@ -1615,6 +1626,7 @@ namespace MizuMail
                 statusStrip1.Refresh();
             }
 
+            // ★ 新着メールがあれば通知
             if (mailCount > 0)
             {
                 if (Mail.alertSound && !string.IsNullOrWhiteSpace(Mail.alertSoundFile))
@@ -1637,8 +1649,6 @@ namespace MizuMail
                 statusStrip1.Refresh();
             }
 
-            toolMailProgress.Value = 100;
-            await Task.Delay(300);
             toolMailProgress.Value = 0;
             toolMailProgress.Visible = false;
 
@@ -1658,9 +1668,6 @@ namespace MizuMail
             // ★ ApplyRules を安全に実行
             ApplyRulesForFolder(folderManager.Inbox);
             ApplyRulesForFolder(folderManager.Spam);
-            ApplyRulesForFolder(folderManager.Send);
-            ApplyRulesForFolder(folderManager.Draft);
-            ApplyRulesForFolder(folderManager.Trash);
 
             // ★ ApplyRules による移動後のフォルダを再読み込み
             LoadEmlFolder(folderManager.Inbox);
@@ -1681,7 +1688,7 @@ namespace MizuMail
             int mailCount = 0;
             string prevFolderPath = (treeMain.SelectedNode?.Tag as MailFolder)?.FullPath;
 
-            updatedFolders.Clear();   // ★★★ 最重要：毎回クリア
+            updatedFolders.Clear();
 
             try
             {
@@ -1699,29 +1706,33 @@ namespace MizuMail
                     labelMessage.Text = $"{inbox.Count}件のメッセージがあります";
                     statusStrip1.Refresh();
 
+                    // ★ UID だけを先に取得
                     var summaries = await inbox.FetchAsync(0, -1, MessageSummaryItems.UniqueId);
 
+                    // ★ 新規 UID のみ抽出
+                    var newUids = summaries
+                        .Where(s => !localUidls.Contains(s.UniqueId.Id.ToString()))
+                        .ToList();
+
+                    int totalToReceive = newUids.Count;
+
                     toolMailProgress.Visible = true;
-                    int total = summaries.Count;
+                    toolMailProgress.Maximum = Math.Max(1, totalToReceive);
+                    toolMailProgress.Value = 0;
 
-                    for (int i = 0; i < total; i++)
+                    int progress = 0;
+
+                    // ★ 新規メールだけ受信
+                    foreach (var summary in newUids)
                     {
-                        toolMailProgress.Value = (int)((i + 1) * 100.0 / total);
-                        statusStrip1.Refresh();
+                        string uid = summary.UniqueId.Id.ToString();
 
-                        var summary = summaries[i];
-                        var uid = summary.UniqueId.Id.ToString();
-
-                        if (localUidls.Contains(uid))
-                            continue;
-
-                        labelMessage.Text = $"{i + 1}件目のメール受信中";
+                        labelMessage.Text = $"{progress + 1}/{totalToReceive} 件目のメール受信中";
                         statusStrip1.Refresh();
 
                         var message = await inbox.GetMessageAsync(summary.UniqueId);
 
                         string baseName = uid;
-
                         foreach (char c in Path.GetInvalidFileNameChars())
                             baseName = baseName.Replace(c, '_');
 
@@ -1758,6 +1769,10 @@ namespace MizuMail
 
                         localUidls.Add(uid);
                         mailCount++;
+
+                        progress++;
+                        if (progress <= toolMailProgress.Maximum)
+                            toolMailProgress.Value = progress;
                     }
 
                     await client.DisconnectAsync(true);
@@ -1774,6 +1789,7 @@ namespace MizuMail
                 statusStrip1.Refresh();
             }
 
+            // ★ 新着通知
             if (mailCount > 0)
             {
                 if (Mail.alertSound && !string.IsNullOrWhiteSpace(Mail.alertSoundFile))
@@ -1800,8 +1816,6 @@ namespace MizuMail
                 statusStrip1.Refresh();
             }
 
-            toolMailProgress.Value = 100;
-            await Task.Delay(300);
             toolMailProgress.Value = 0;
             toolMailProgress.Visible = false;
 
@@ -1814,25 +1828,18 @@ namespace MizuMail
                     treeMain.SelectedNode = found;
             }
 
-            // ★ 受信フォルダを安定状態で読み込む
             foreach (var f in updatedFolders)
                 LoadEmlFolder(f);
 
-            // ★ ApplyRules を安全に実行
             ApplyRulesForFolder(folderManager.Inbox);
             ApplyRulesForFolder(folderManager.Spam);
-            ApplyRulesForFolder(folderManager.Send);
-            ApplyRulesForFolder(folderManager.Draft);
-            ApplyRulesForFolder(folderManager.Trash);
 
-            // ★ ApplyRules による移動後のフォルダを再読み込み
             LoadEmlFolder(folderManager.Inbox);
             LoadEmlFolder(folderManager.Spam);
             LoadEmlFolder(folderManager.Send);
             LoadEmlFolder(folderManager.Draft);
             LoadEmlFolder(folderManager.Trash);
 
-            // ★ Inbox サブフォルダを再構築
             TreeNode inboxNode = treeMain.Nodes[0].Nodes[0];
             LoadInboxFolders(inboxNode, folderManager.Inbox);
 
@@ -1894,6 +1901,9 @@ namespace MizuMail
                 // ★ メールを元の場所へ戻す
                 Directory.CreateDirectory(Path.GetDirectoryName(oldPath));
                 File.Move(newPath, oldPath);
+
+                // ★ タグ JSON も元の場所へ戻す
+                TagStorage.MoveTags(meta.MessageId, newPath, oldPath);
 
                 // ★ .meta 削除
                 File.Delete(metaFile);
@@ -2747,22 +2757,13 @@ namespace MizuMail
                     mail.preview = BuildPreview(mail.body, mail.isHtml);
 
                     // ★ タグ読み込み
-                    var labels = message.Headers["X-MizuMail-Labels"];
-                    if (!string.IsNullOrEmpty(labels))
-                    {
-                        mail.Labels = labels
-                            .Split(',')
-                            .Select(t => t.Trim())
-                            .Where(t => t.Length > 0)
-                            .ToList();
-                    }
-                    else
-                    {
-                        mail.Labels = new List<string>();
-                    }
+                    mail.Labels = TagStorage.LoadTags(mail);
 
-                    // ★ ラベルルール適用
-                    ApplyLabelRules(mail);
+                    if (!TagStorage.Exists(mail))
+                    {
+                        ApplyLabelRules(mail);
+                        SaveMailLabels(mail);
+                    }
 
                     // ★ キャッシュ読み込み
                     LoadMailCache(mail);
@@ -3370,6 +3371,12 @@ namespace MizuMail
             if (File.Exists(oldPath))
                 File.Move(oldPath, newPath);
 
+            // ★ タグ JSON も移動する
+            TagStorage.MoveTags(mail.message.MessageId, oldPath, newPath);
+
+            // ★ メール内容を再読み込み（添付も含めて復元）
+            mail.message = MimeMessage.Load(mail.mailPath);
+
             // ★ mailCache 更新（ここでは oldPath はもう存在しないので Remove 不要）
             mail.mailPath = newPath;
             mail.Folder = newFolder;
@@ -3383,7 +3390,8 @@ namespace MizuMail
                     OldPath = oldPath,
                     NewPath = newPath,
                     OldFolder = oldFolderType,
-                    OldFolderPath = oldFolderPath
+                    OldFolderPath = oldFolderPath,
+                    MessageId = mail.message.MessageId
                 };
 
                 string metaJson = JsonConvert.SerializeObject(meta, Formatting.Indented);
@@ -3398,22 +3406,7 @@ namespace MizuMail
 
             try
             {
-                var msg = MimeMessage.Load(mail.mailPath);
-
-                // 既存のタグヘッダを削除
-                msg.Headers.Remove("X-MizuMail-Labels");
-
-                // タグが残っている場合だけ書き込む
-                if (mail.Labels != null && mail.Labels.Count > 0)
-                {
-                    msg.Headers.Add("X-MizuMail-Labels", string.Join(", ", mail.Labels));
-                }
-
-                // 上書き保存
-                using (var stream = File.Create(mail.mailPath))
-                {
-                    msg.WriteTo(stream);
-                }
+                TagStorage.SaveTags(mail);
             }
             catch (Exception ex)
             {
@@ -3599,7 +3592,7 @@ namespace MizuMail
             mailCache[newPath] = mail;
         }
 
-        private void menuReleEdit_Click(object sender, EventArgs e)
+        private void menuRuleEdit_Click(object sender, EventArgs e)
         {
             var dlg = new FormRuleEditor(rules, treeMain.Nodes[0]);
             dlg.Owner = this;
@@ -4395,20 +4388,17 @@ namespace MizuMail
 
                 string saveDir = dialog.SelectedPath;
 
-                foreach (var attachment in mail.message.Attachments)
+                foreach (var part in FindAttachments(mail.message.Body))
                 {
-                    if (attachment is MimePart part)
+                    string fileName = GetAttachmentName(part);
+                    if (string.IsNullOrEmpty(fileName))
+                        fileName = "attachment.bin";
+
+                    string savePath = Path.Combine(saveDir, fileName);
+
+                    using (var stream = File.Create(savePath))
                     {
-                        string fileName = part.FileName;
-                        if (string.IsNullOrEmpty(fileName))
-                            fileName = "attachment.bin";
-
-                        string savePath = Path.Combine(saveDir, fileName);
-
-                        using (var stream = File.Create(savePath))
-                        {
-                            part.Content.DecodeTo(stream);
-                        }
+                        part.Content.DecodeTo(stream);
                     }
                 }
 

@@ -201,6 +201,7 @@
       <DependentUpon>ReplaceDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="SignatureConfig.cs" />
+    <Compile Include="TagStorage.cs" />
     <Compile Include="TagUndoAction.cs" />
     <Compile Include="UndoMeta.cs" />
     <EmbeddedResource Include="AboutForm.resx">

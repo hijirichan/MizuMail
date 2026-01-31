@@ -12,5 +12,6 @@ namespace MizuMail
         public string NewPath { get; set; }
         public FolderType OldFolder { get; set; }
         public string OldFolderPath { get; set; }
+        public string MessageId { get; set; }
     }
 }
