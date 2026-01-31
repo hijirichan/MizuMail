@@ -332,6 +332,7 @@ namespace MizuMail
             this.radioPop3.TabStop = true;
             this.radioPop3.Text = "POP3";
             this.radioPop3.UseVisualStyleBackColor = true;
+            this.radioPop3.CheckedChanged += new System.EventHandler(this.radioPop3_CheckedChanged);
             // 
             // radioImap4
             // 
@@ -342,6 +343,7 @@ namespace MizuMail
             this.radioImap4.TabIndex = 19;
             this.radioImap4.Text = "IMAP4";
             this.radioImap4.UseVisualStyleBackColor = true;
+            this.radioImap4.Click += new System.EventHandler(this.radioImap4_Click);
             // 
             // label9
             // 

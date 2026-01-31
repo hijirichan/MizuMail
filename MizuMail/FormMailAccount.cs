@@ -42,6 +42,7 @@ namespace MizuMail
                 Mail.receiveMethod_Pop3 = false;
                 Mail.imapServerName = textPopServerName.Text;
                 Mail.imapPortNo = int.Parse(textPopServerPortNo.Text);
+                Mail.deleteMail = false;
             }
             Mail.useSsl = checkUseSsl.Checked;
 
@@ -80,10 +81,13 @@ namespace MizuMail
             if (Mail.receiveMethod_Pop3)
             {
                 radioPop3.Checked = true;
+                checkDeleteMail.Enabled = true;
             }
             else
             {
                 radioImap4.Checked = true;
+                checkDeleteMail.Checked = false;
+                checkDeleteMail.Enabled = false;
             }
             checkUseSsl.Checked = Mail.useSsl;
         }
@@ -106,6 +110,17 @@ namespace MizuMail
         {
             updownReceiveInterval.Enabled = checkReceiveInterval.Checked;
             labelReceiveInterval.Enabled = checkReceiveInterval.Checked;
+        }
+
+        private void radioImap4_Click(object sender, EventArgs e)
+        {
+            checkDeleteMail.Checked = false;
+            checkDeleteMail.Enabled = false;
+        }
+
+        private void radioPop3_CheckedChanged(object sender, EventArgs e)
+        {
+            checkDeleteMail.Enabled = true;
         }
     }
 }
