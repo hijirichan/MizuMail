@@ -1644,7 +1644,6 @@ namespace MizuMail
 
         private async Task Pop3Receive()
         {
-            // メール受信件数
             int mailCount = 0;
             string prevFolderPath = (treeMain.SelectedNode?.Tag as MailFolder)?.FullPath;
 
@@ -1670,7 +1669,6 @@ namespace MizuMail
                         statusStrip1.Refresh();
 
                         string uidl = client.GetMessageUid(i);
-
                         if (localUidls.Contains(uidl))
                             continue;
 
@@ -1679,42 +1677,43 @@ namespace MizuMail
 
                         var message = await client.GetMessageAsync(i);
 
-                        // ★ MessageId が無い場合の fallback
+                        // ★ Message-ID を取得（空なら no_message_id）
                         string baseName = message.MessageId;
                         if (string.IsNullOrWhiteSpace(baseName))
-                            baseName = Guid.NewGuid().ToString();
+                            baseName = "no_message_id";
 
                         // ★ ファイル名サニタイズ
                         foreach (char c in Path.GetInvalidFileNameChars())
-                        {
                             baseName = baseName.Replace(c, '_');
-                        }
 
-                        string mailName = baseName + "_unread.eml";
+                        // ★ GUID を付けて絶対衝突しないファイル名にする
+                        string unique = Guid.NewGuid().ToString("N");
+                        string mailName = $"{baseName}_{unique}_unread.eml";
 
                         string inboxPath = Path.Combine(folderManager.Inbox.FullPath, mailName);
                         Directory.CreateDirectory(folderManager.Inbox.FullPath);
 
-                        await Task.Run(() => message.WriteTo(inboxPath));
+                        // ★ EML 保存
+                        // ★ FileStream + Flush(true) で保存完了を保証
+                        using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            message.WriteTo(fs);
+                            fs.Flush(true); // ディスクに確実に書き込む
+                        }
 
-                        // ★ Mail オブジェクト生成（folder は不要）
+                        // ★ Mail オブジェクト生成
                         Mail mail = Mail.FromMimeMessage(message);
                         mail.mailName = mailName;
                         mail.notReadYet = true;
-
-                        // ★ パス設定（必須）
                         mail.mailPath = inboxPath;
-
-                        // ★ ここが絶対に必要（今回の NullReference の原因）
                         mail.Folder = folderManager.Inbox;
 
-                        // 振り分け処理
+                        // ★ 振り分け処理
                         ApplyRulesForNewMail(mail);
 
-                        // ★ mailCache に登録（必須）
+                        // ★ mailCache に登録
                         mailCache[inboxPath] = mail;
 
-                        // 変更のあったフォルダを登録
                         updatedFolders.Add(mail.Folder);
 
                         // ★ UIDL 保存
@@ -1728,7 +1727,6 @@ namespace MizuMail
                     await client.DisconnectAsync(true);
                 }
 
-                // ★ UIDL 永続化（最後に1回だけ）
                 SaveUidls();
 
                 labelMessage.Text = "メール受信完了";
@@ -1741,7 +1739,6 @@ namespace MizuMail
                 statusStrip1.Refresh();
             }
 
-            // 通知音など（既存の安全対策はそのまま）
             if (mailCount > 0)
             {
                 if (Mail.alertSound && !string.IsNullOrWhiteSpace(Mail.alertSoundFile))
@@ -1751,13 +1748,7 @@ namespace MizuMail
                         if (File.Exists(Mail.alertSoundFile))
                         {
                             using (var p = new SoundPlayer(Mail.alertSoundFile))
-                            {
                                 p.Play();
-                            }
-                        }
-                        else
-                        {
-                            logger.Error($"Alert sound file not found: {Mail.alertSoundFile}");
                         }
                     }
                     catch (Exception ex)
@@ -1775,7 +1766,6 @@ namespace MizuMail
             toolMailProgress.Value = 0;
             toolMailProgress.Visible = false;
 
-            // ツリービューとリストビューの表示を更新する
             UpdateTreeView();
 
             if (!string.IsNullOrEmpty(prevFolderPath))
@@ -1785,7 +1775,6 @@ namespace MizuMail
                     treeMain.SelectedNode = found;
             }
 
-            // ★ 受信フォルダを再読み込みして mailCache を更新
             foreach (var f in updatedFolders)
                 LoadEmlFolder(f);
 
@@ -1834,13 +1823,26 @@ namespace MizuMail
 
                         var message = await inbox.GetMessageAsync(summary.UniqueId);
 
-                        // ★ UID をファイル名にする（IMAP の正しい方法）
-                        string mailName = uid + "_unread.eml";
+                        // ★ UID をベースにする（IMAP の正しい方法）
+                        string baseName = uid;
+
+                        // ★ ファイル名サニタイズ
+                        foreach (char c in Path.GetInvalidFileNameChars())
+                            baseName = baseName.Replace(c, '_');
+
+                        // ★ GUID を付けて絶対衝突しないファイル名にする
+                        string unique = Guid.NewGuid().ToString("N");
+                        string mailName = $"{baseName}_{unique}_unread.eml";
 
                         string inboxPath = Path.Combine(folderManager.Inbox.FullPath, mailName);
                         Directory.CreateDirectory(folderManager.Inbox.FullPath);
 
-                        await Task.Run(() => message.WriteTo(inboxPath));
+                        // ★ FileStream + Flush(true) で保存完了を保証
+                        using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            message.WriteTo(fs);
+                            fs.Flush(true);
+                        }
 
                         // ★ Mail オブジェクト生成
                         Mail mail = new Mail(
@@ -5061,7 +5063,18 @@ namespace MizuMail
             ["line"] = new HashSet<string> { "line", "linecorp", "linepay" },
             
             // メルカリ
-            ["mercari"] = new HashSet<string> { "mercari" }
+            ["mercari"] = new HashSet<string> { "mercari" },
+
+            // JTB
+            ["jtb"] = new HashSet<string>
+            {
+                "jtb", "jtbcorp", "jtbtravel", "jtb-global"
+            },
+
+            ["ジェイティービー"] = new HashSet<string>
+            {
+                "jtb", "jtbcorp", "jtbtravel", "jtb-global"
+            }
         };
 
         public static bool IsSuspiciousSender(Mail mail)
