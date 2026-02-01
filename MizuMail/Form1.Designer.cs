@@ -297,7 +297,7 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
@@ -305,14 +305,14 @@ namespace MizuMail
             // menuRuleEdit
             // 
             this.menuRuleEdit.Name = "menuRuleEdit";
-            this.menuRuleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuRuleEdit.Size = new System.Drawing.Size(212, 26);
             this.menuRuleEdit.Text = "振り分け設定(&R)";
             this.menuRuleEdit.Click += new System.EventHandler(this.menuRuleEdit_Click);
             // 
             // menuSignatureSetting
             // 
             this.menuSignatureSetting.Name = "menuSignatureSetting";
-            this.menuSignatureSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuSignatureSetting.Size = new System.Drawing.Size(212, 26);
             this.menuSignatureSetting.Text = "署名の設定(&S)";
             this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
             // 

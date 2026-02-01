@@ -24,6 +24,7 @@ using System.Security.Cryptography;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -1585,10 +1586,24 @@ namespace MizuMail
                         string inboxPath = Path.Combine(folderManager.Inbox.FullPath, mailName);
                         Directory.CreateDirectory(folderManager.Inbox.FullPath);
 
-                        using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        try
                         {
-                            message.WriteTo(fs);
-                            fs.Flush(true);
+                            using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                message.WriteTo(fs);
+                                fs.Flush(true);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error("WriteTo failed: " + ex.Message);
+                            continue; // このメールはスキップ
+                        }
+
+                        if (!File.Exists(inboxPath))
+                        {
+                            logger.Error("File was not created: " + inboxPath);
+                            continue;
                         }
 
                         Mail mail = Mail.FromMimeMessage(message);
@@ -1663,11 +1678,14 @@ namespace MizuMail
 
             // ★ 受信フォルダを安定状態で読み込む
             foreach (var f in updatedFolders)
+            {
+                // ★ ファイルが確実に存在するまで待つ
+                WaitForFilesToAppear(f);
                 LoadEmlFolder(f);
+            }
 
             // ★ ApplyRules を安全に実行
             ApplyRulesForFolder(folderManager.Inbox);
-            ApplyRulesForFolder(folderManager.Spam);
 
             // ★ ApplyRules による移動後のフォルダを再読み込み
             LoadEmlFolder(folderManager.Inbox);
@@ -1742,10 +1760,24 @@ namespace MizuMail
                         string inboxPath = Path.Combine(folderManager.Inbox.FullPath, mailName);
                         Directory.CreateDirectory(folderManager.Inbox.FullPath);
 
-                        using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        try
                         {
-                            message.WriteTo(fs);
-                            fs.Flush(true);
+                            using (var fs = new FileStream(inboxPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                message.WriteTo(fs);
+                                fs.Flush(true);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error("WriteTo failed: " + ex.Message);
+                            continue; // このメールはスキップ
+                        }
+
+                        if (!File.Exists(inboxPath))
+                        {
+                            logger.Error("File was not created: " + inboxPath);
+                            continue;
                         }
 
                         Mail mail = new Mail(
@@ -1828,11 +1860,15 @@ namespace MizuMail
                     treeMain.SelectedNode = found;
             }
 
+            // ★ 受信フォルダを安定状態で読み込む
             foreach (var f in updatedFolders)
+            {
+                // ★ ファイルが確実に存在するまで待つ
+                WaitForFilesToAppear(f);
                 LoadEmlFolder(f);
+            }
 
             ApplyRulesForFolder(folderManager.Inbox);
-            ApplyRulesForFolder(folderManager.Spam);
 
             LoadEmlFolder(folderManager.Inbox);
             LoadEmlFolder(folderManager.Spam);
@@ -1844,6 +1880,21 @@ namespace MizuMail
             LoadInboxFolders(inboxNode, folderManager.Inbox);
 
             UpdateListView();
+        }
+
+        private void WaitForFilesToAppear(MailFolder folder)
+        {
+            var files = Directory.GetFiles(folder.FullPath, "*.eml");
+
+            foreach (var file in files)
+            {
+                int retry = 0;
+                while (!File.Exists(file) && retry < 10)
+                {
+                    Thread.Sleep(50); // 50ms × 10 = 最大 0.5 秒待つ
+                    retry++;
+                }
+            }
         }
 
         private void ApplyRulesForFolder(MailFolder folder)
@@ -2759,12 +2810,6 @@ namespace MizuMail
                     // ★ タグ読み込み
                     mail.Labels = TagStorage.LoadTags(mail);
 
-                    if (!TagStorage.Exists(mail))
-                    {
-                        ApplyLabelRules(mail);
-                        SaveMailLabels(mail);
-                    }
-
                     // ★ キャッシュ読み込み
                     LoadMailCache(mail);
 
@@ -3374,11 +3419,12 @@ namespace MizuMail
             // ★ タグ JSON も移動する
             TagStorage.MoveTags(mail.message.MessageId, oldPath, newPath);
 
-            // ★ メール内容を再読み込み（添付も含めて復元）
-            mail.message = MimeMessage.Load(mail.mailPath);
-
             // ★ mailCache 更新（ここでは oldPath はもう存在しないので Remove 不要）
             mail.mailPath = newPath;
+
+            // ★ メール内容を再読み込み（添付も含めて復元）
+            mail.message = MimeMessage.Load(newPath);
+
             mail.Folder = newFolder;
             mailCache[newPath] = mail;
 
@@ -3989,13 +4035,83 @@ namespace MizuMail
 
         private void ApplyLocalFilters()
         {
-            // ★ Inbox のメールを全部読み込む
             var inbox = folderManager.Inbox;
             var mails = LoadEmlFolder(inbox);
 
             foreach (var mail in mails)
             {
-                ApplyLabelRules(mail);  // ← ラベル付与のルールを適用
+                ApplyLocalRulesToMail(mail);
+            }
+        }
+
+        private void ApplyLocalRulesToMail(Mail mail)
+        {
+            if (rules == null || rules.Count == 0)
+                return;
+
+            string subject = mail.subject ?? "";
+            string fromFull = mail.from ?? "";
+            string fromAddress = ExtractAddress(fromFull);
+            string oldPath = mail.mailPath;
+
+            foreach (var rule in rules)
+            {
+                bool match = false;
+
+                // 件名
+                if (!string.IsNullOrWhiteSpace(rule.Contains))
+                {
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(subject, rule.Contains, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (subject.IndexOf(rule.Contains, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
+                }
+
+                // 差出人
+                if (!string.IsNullOrWhiteSpace(rule.From))
+                {
+                    if (rule.UseRegex)
+                    {
+                        if (Regex.IsMatch(fromFull, rule.From, RegexOptions.IgnoreCase) ||
+                            Regex.IsMatch(fromAddress, rule.From, RegexOptions.IgnoreCase))
+                            match = true;
+                    }
+                    else
+                    {
+                        if (fromFull.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            fromAddress.IndexOf(rule.From, StringComparison.OrdinalIgnoreCase) >= 0)
+                            match = true;
+                    }
+                }
+
+                if (!match)
+                    continue;
+
+                // ★ ラベル付与（必要なら）
+                if (!string.IsNullOrWhiteSpace(rule.Label))
+                {
+                    if (!mail.Labels.Contains(rule.Label))
+                        mail.Labels.Add(rule.Label);
+                }
+
+                // ★ 移動先フォルダ
+                if (!string.IsNullOrWhiteSpace(rule.MoveTo))
+                {
+                    MailFolder target = folderManager.GetOrCreateFolderByPath(rule.MoveTo);
+                    if (target != null)
+                    {
+                        MoveMailWithUndo(mail, target);
+                        UpdateMailCacheAfterMove(oldPath, mail);
+                    }
+                }
+
+                break; // 最初の一致だけ適用
             }
         }
 
@@ -4119,36 +4235,40 @@ namespace MizuMail
             return jp;
         }
 
-        public static string ExtractDomain(string address)
+        private static string ExtractDomain(string address)
         {
             if (string.IsNullOrEmpty(address))
                 return "";
 
             int at = address.IndexOf('@');
-            if (at < 0) return "";
+            if (at < 0 || at == address.Length - 1)
+                return "";
 
-            return address.Substring(at + 1).ToLowerInvariant();
+            return address.Substring(at + 1).ToLower();
         }
 
-        public static string ExtractDomainMain(string domain)
+        private static string ExtractDomainMain(string domain)
         {
             if (string.IsNullOrEmpty(domain))
                 return "";
 
             var parts = domain.Split('.');
+            if (parts.Length < 2)
+                return "";
 
-            // 例: e.resonabank.co.jp → ["e","resonabank","co","jp"]
-            if (parts.Length >= 3)
+            string last = parts[parts.Length - 1];
+            string second = parts[parts.Length - 2];
+
+            // co.jp / ne.jp / or.jp などは3ラベルで1セット
+            if (last == "jp" && (second == "co" || second == "ne" || second == "or"))
             {
-                // 最後が jp / kr / in など → 企業名は最後から3番目
-                return parts[parts.Length - 3].ToLowerInvariant();
+                if (parts.Length >= 3)
+                    return parts[parts.Length - 3]; // 7cs-card.co.jp → 7cs-card
+                return "";
             }
 
-            // それ以外は最後から2番目
-            if (parts.Length >= 2)
-                return parts[parts.Length - 2].ToLowerInvariant();
-
-            return domain.ToLowerInvariant();
+            // 通常のドメイン
+            return second; // aeonshop.com → aeonshop
         }
 
         public static bool IsAscii(string s)
@@ -4219,120 +4339,119 @@ namespace MizuMail
 
             // JTB
             ["jtb"] = new HashSet<string> { "jtb", "mirai", "jtbcorp", "jtbtravel", "jtb-global" },
-            ["ジェイティービー"] = new HashSet<string> { "jtb", "mirai", "jtbcorp", "jtbtravel", "jtb-global" }
+            ["ジェイティービー"] = new HashSet<string> { "jtb", "mirai", "jtbcorp", "jtbtravel", "jtb-global" },
+
+            // MilleMiglia
+            ["mymiglia"] = new HashSet<string> { "mymiglia" },
+            ["millemiglia"] = new HashSet<string> { "mymiglia" },
+
+            // セゾンカード
+            ["saison"] = new HashSet<string> { "7cs-card", "saisoncard" },
+            ["セゾン"] = new HashSet<string> { "7cs-card", "saisoncard" },
+
+            // イオン銀行、イオンショップ
+            ["aeon"] = new HashSet<string> { "aeon", "aeonbank", "aeonshop" },
+            ["イオン"] = new HashSet<string> { "aeon", "aeonbank", "aeonshop" }
         };
 
         public static bool IsSuspiciousSender(Mail mail)
         {
-            // ★ 基本的な null チェック
-            if (mail == null || mail.message == null || mail.From == null)
-            {
-                logger.Warn("[SpamCheck] Suspicious=false (null mail or From)");
+            if (mail?.From == null)
                 return false;
-            }
 
-            if (mail.From.DisplayName == null || mail.From.Address == null)
-            {
-                logger.Warn($"[SpamCheck] Suspicious=false (null DisplayName/Address) From='{mail.from}'");
-                return false;
-            }
-
-            // ★ 差出人名からブランド名を抽出（Leet 正規化込み）
-            string brand = ExtractBrandName(mail.From.DisplayName);
-            brand = NormalizeLeet(brand);
-
-            // ★ メールアドレスからドメイン抽出
-            string domain = ExtractDomain(mail.From.Address);
+            string display = mail.From.DisplayName ?? "";
+            string address = mail.From.Address ?? "";
+            string domain = ExtractDomain(address);
             string domainMain = ExtractDomainMain(domain);
 
-            if (string.IsNullOrEmpty(domain) || string.IsNullOrEmpty(domainMain))
-            {
-                logger.Warn($"[SpamCheck] Suspicious=false (domain empty) From='{mail.from}'");
-                return false;
-            }
+            // ================================
+            // 1. あなたの BrandDomainWhitelist を最優先で適用
+            // ================================
+            // ★ domainMain がホワイトリストに含まれていれば無条件で安全
+            if (BrandDomainWhitelist.Any(kv => kv.Value.Contains(domainMain)))
+                return false; // ← ここで return したら絶対に上書きされない
 
-            // ★ TLD（トップレベルドメイン）が怪しい場合は即アウト
+            // ================================
+            // 2. 危険TLD・ブラックリスト・ランダムドメイン
+            // ================================
             if (IsSuspiciousTld(domain))
-            {
-                logger.Warn($"[SpamCheck] Suspicious=true (SuspiciousTLD) From='{mail.from}' Domain='{domain}'");
                 return true;
-            }
 
-            // ★ 無視すべき一般語ドメイン（info, mail, support など）
-            if (DomainIgnoreList.Contains(domainMain))
-            {
-                logger.Info($"[SpamCheck] Suspicious=false (DomainIgnoreList) From='{mail.from}' DomainMain='{domainMain}'");
-                return false;
-            }
+            if (IsBlacklistedDomain(domainMain))
+                return true;
 
-            // ★ ドメインだけでホワイトリスト判定（JTB対策）
-            foreach (var kv in BrandDomainWhitelist)
-            {
-                if (kv.Value.Contains(domainMain))
-                {
-                    logger.Info($"[SpamCheck] Suspicious=false (DomainWhitelist) From='{mail.from}' DomainMain='{domainMain}'");
-                    return false;
-                }
-            }
+            if (LooksRandomDomain(domainMain))
+                return true;
 
-            // ★ ブランド名が空 → 判定不可（普通の個人メールなど）
+            // ================================
+            // 3. ブランド名抽出（あなたのロジックをそのまま使用）
+            // ================================
+            string brand = ExtractBrandName(display);
+            brand = NormalizeLeet(brand);
+
+            // ブランド名が空 → 個人メールなど → 安全扱い
             if (string.IsNullOrEmpty(brand))
-            {
-                logger.Info($"[SpamCheck] Suspicious=false (brand empty) From='{mail.from}'");
                 return false;
-            }
 
-            // ★ ブランド名とホワイトリストの照合（従来ロジック）
-            foreach (var kv in BrandDomainWhitelist)
-            {
-                bool brandMatchesKey =
-                    brand.IndexOf(kv.Key, StringComparison.OrdinalIgnoreCase) >= 0;
+            // ================================
+            // 4. DomainIgnoreList（あなたの構成をそのまま使用）
+            // ================================
+            if (DomainIgnoreList.Contains(domainMain))
+                return false;
 
-                bool brandMatchesAlias =
-                    kv.Value.Any(v => brand.IndexOf(v, StringComparison.OrdinalIgnoreCase) >= 0);
-
-                if (brandMatchesKey || brandMatchesAlias)
-                {
-                    if (!kv.Value.Contains(domainMain))
-                    {
-                        logger.Warn($"[SpamCheck] Suspicious=true (BrandMatchButDomainMismatch) From='{mail.from}' Brand='{brand}' DomainMain='{domainMain}'");
-                        return true;
-                    }
-
-                    logger.Info($"[SpamCheck] Suspicious=false (BrandWhitelist) From='{mail.from}' Brand='{brand}' DomainMain='{domainMain}'");
-                    return false;
-                }
-            }
-
-            // 日本語ブランド名は距離判定しない → 安全扱い
+            // ================================
+            // 5. 日本語ブランド名 → パターンベース判定
+            // ================================
             if (!IsAscii(brand))
             {
-                logger.Info($"[SpamCheck] Suspicious=false (JapaneseBrandSkip) From='{mail.from}' Brand='{brand}'");
+                string normalizedBrand = NormalizeForMatch(brand);
+
+                // 1. ドメインが信頼できる企業なら無条件で安全
+                if (IsTrustedDomain(domainMain))
+                    return false;
+
+                // 2. 汎用ワード（フィッシングで頻出）
+                string[] suspiciousWords = {
+                    "重要", "お知らせ", "確認", "緊急", "停止", "更新", "明細", "返金"
+                };
+
+                if (suspiciousWords.Any(w => normalizedBrand.Contains(w)))
+                    return true; // ドメインが信頼できないので怪しい
+
+                // 3. 固有名詞っぽい日本語（企業名）は安全寄り
+                if (LooksLikeProperNoun(normalizedBrand))
+                    return false;
+
+                // 4. それ以外は安全寄り
                 return false;
             }
 
-
-            // ★ 長さ差が大きい場合は距離判定しない（Apple Developer 対策）
-            if (Math.Abs(brand.Length - domainMain.Length) >= 5)
-            {
-                logger.Info($"[SpamCheck] Suspicious=false (LengthDiffSkip) From='{mail.from}' Brand='{brand}' DomainMain='{domainMain}'");
+            // ================================
+            // 6. 個人メールのチェック
+            // ================================
+            if (LooksLikePersonName(display))
                 return false;
-            }
 
-            // ★ Levenshtein 距離判定（動的閾値）
-            int distance = Levenshtein(brand, domainMain);
-            int threshold = Math.Max(4, brand.Length / 2 + 2);
+            string[] personalDomains = { "gmail", "yahoo", "outlook", "hotmail", "icloud", "me", "mac" };
 
-            logger.Debug($"[SpoofCheck] Brand='{brand}', Domain='{domainMain}', Distance={distance}, Threshold={threshold}, From='{mail.from}'");
+            if (personalDomains.Contains(domainMain))
+                return false;
+
+            // ================================
+            // 7. 英語ブランド名 → 距離判定（あなたのロジックを活かす）
+            // ================================
+            int distance = Levenshtein(brand.ToLower(), domainMain.ToLower());
+            int threshold = Math.Max(3, brand.Length / 2);
 
             if (distance >= threshold)
-            {
-                logger.Warn($"[SpamCheck] Suspicious=true (DistanceCheck) From='{mail.from}' Brand='{brand}' DomainMain='{domainMain}' Distance={distance} Threshold={threshold}");
                 return true;
-            }
 
-            logger.Info($"[SpamCheck] Suspicious=false (DistanceOK) From='{mail.from}' Brand='{brand}' DomainMain='{domainMain}' Distance={distance} Threshold={threshold}");
             return false;
+        }
+
+        private static bool LooksLikePersonName(string s)
+        {
+            return s.Contains(" ") || s.Any(char.IsUpper);
         }
 
         static readonly Dictionary<char, char> LeetMap = new Dictionary<char, char>
@@ -4357,7 +4476,7 @@ namespace MizuMail
 
         static readonly HashSet<string> SuspiciousTlds = new HashSet<string>
         {
-            "xyz", "top", "shop", "work", "loan", "click", "info"
+            "xyz", "top", "shop", "work", "loan", "click", "cn", "xxx"
         };
 
         public static bool IsSuspiciousTld(string domain)
@@ -4365,6 +4484,66 @@ namespace MizuMail
             var parts = domain.Split('.');
             string tld = parts.Last();
             return SuspiciousTlds.Contains(tld);
+        }
+
+        private static bool LooksRandomDomain(string domainMain)
+        {
+            if (domainMain.Length <= 5)
+            {
+                int alpha = domainMain.Count(char.IsLetter);
+                if (alpha == domainMain.Length)
+                {
+                    int vowels = domainMain.Count(c => "aeiou".Contains(char.ToLower(c)));
+                    if (vowels == 0)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool IsBlacklistedDomain(string domainMain)
+        {
+            string[] blacklist = { "bckrk", "monster", "click", "loan", "secure-check", "verify-now" };
+
+            return blacklist.Contains(domainMain);
+        }
+
+        private static bool IsTrustedDomain(string domainMain)
+        {
+            // あなたの BrandDomainWhitelist をそのまま利用
+            return BrandDomainWhitelist.Any(kv => kv.Value.Contains(domainMain));
+        }
+
+        private static bool LooksLikeProperNoun(string brand)
+        {
+            // カタカナ or 固有名詞っぽい漢字が多い場合は true
+            int kana = brand.Count(c => (c >= 'ァ' && c <= 'ヶ'));
+            int kanji = brand.Count(c => (c >= '一' && c <= '龥'));
+
+            return (kana + kanji) >= (brand.Length / 2);
+        }
+
+        private static string NormalizeForMatch(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return s;
+
+            string result = s;
+
+            result = result.Replace("株式会社", "")
+                           .Replace("（株）", "")
+                           .Replace("(株)", "")
+                           .Replace("【公式】", "")
+                           .Replace("【重要】", "")
+                           .Replace("【お知らせ】", "");
+
+            int idx = result.IndexOf('（');
+            if (idx >= 0)
+                result = result.Substring(0, idx);
+
+            result = result.Replace("　", "");
+
+            return result.Trim();
         }
 
         private void menuAttachmentFileAllSave_Click(object sender, EventArgs e)
