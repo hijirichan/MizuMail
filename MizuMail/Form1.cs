@@ -27,6 +27,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MizuMail
 {
@@ -135,11 +136,13 @@ namespace MizuMail
 
         private void UpdateTreeView()
         {
+            treeMain.BeginUpdate();
+
             // 受信
             int inboxCount = Directory.GetFiles(folderManager.Inbox.FullPath, "*.eml").Length;
             treeMain.Nodes[0].Nodes[0].Text = $"受信メール({inboxCount})";
 
-            // 受信
+            // 迷惑メール
             int spamCount = Directory.GetFiles(folderManager.Spam.FullPath, "*.eml").Length;
             treeMain.Nodes[0].Nodes[1].Text = $"迷惑メール({spamCount})";
 
@@ -154,6 +157,8 @@ namespace MizuMail
             // ごみ箱
             int trashCount = Directory.GetFiles(folderManager.Trash.FullPath, "*.eml").Length;
             treeMain.Nodes[0].Nodes[4].Text = $"ごみ箱({trashCount})";
+
+            treeMain.EndUpdate();
         }
 
         private string FormatSize(long bytes)
@@ -1698,6 +1703,7 @@ namespace MizuMail
             TreeNode inboxNode = treeMain.Nodes[0].Nodes[0];
             LoadInboxFolders(inboxNode, folderManager.Inbox);
 
+            UpdateTreeView();
             UpdateListView();
         }
 
@@ -1879,6 +1885,7 @@ namespace MizuMail
             TreeNode inboxNode = treeMain.Nodes[0].Nodes[0];
             LoadInboxFolders(inboxNode, folderManager.Inbox);
 
+            UpdateTreeView();
             UpdateListView();
         }
 
@@ -2793,7 +2800,7 @@ namespace MizuMail
                     else
                         mail.date = "";
 
-                    mail.hasAtach = message.Attachments != null && message.Attachments.Any();
+                    mail.hasAtach = HasRealAttachment(message);    // message.Attachments != null && message.Attachments.Any();
                     mail.body = "";
                     mail.message = message;
                     mail.isDraft = message.Headers["X-MizuMail-Draft"] == "1";
@@ -3162,23 +3169,6 @@ namespace MizuMail
 
                 // ★ 再帰
                 LoadSubFoldersRecursive(node, sub);
-            }
-        }
-
-        private void LoadFolderRecursive(TreeNode parentNode, string parentFolder, string parentPath)
-        {
-            foreach (var dir in Directory.GetDirectories(parentPath))
-            {
-                string folderName = Path.GetFileName(dir);          // 例: "仕事"
-                string folderPath = parentFolder + "/" + folderName; // 例: "inbox/仕事"
-
-                TreeNode node = new TreeNode(folderName);
-                node.Tag = folderPath;  // ← 最重要
-
-                parentNode.Nodes.Add(node);
-
-                // 再帰的にサブフォルダを読み込む
-                LoadFolderRecursive(node, folderPath, dir);
             }
         }
 
@@ -4036,12 +4026,26 @@ namespace MizuMail
         private void ApplyLocalFilters()
         {
             var inbox = folderManager.Inbox;
-            var mails = LoadEmlFolder(inbox);
+
+            // 1. Inbox のメールを読み込む（mailCache 更新）
+            LoadEmlFolder(inbox);
+
+            // 2. ルール適用
+            var mails = mailCache.Values
+                .Where(m => m.Folder == inbox)
+                .ToList();
 
             foreach (var mail in mails)
             {
                 ApplyLocalRulesToMail(mail);
             }
+
+            // ★★★ 3. 全フォルダを再読み込みして mailCache を完全同期
+            LoadEmlFolder(folderManager.Inbox);
+            LoadEmlFolder(folderManager.Spam);
+            LoadEmlFolder(folderManager.Send);
+            LoadEmlFolder(folderManager.Draft);
+            LoadEmlFolder(folderManager.Trash);
         }
 
         private void ApplyLocalRulesToMail(Mail mail)
@@ -4949,6 +4953,95 @@ namespace MizuMail
                 logger.Error("RetrieveVirtualItem error: " + ex);
                 e.Item = new ListViewItem("ERR");
             }
+        }
+
+        private bool HasRealAttachment(MimeMessage message)
+        {
+            // HTML 本文を取得
+            var html = message.GetTextBody(MimeKit.Text.TextFormat.Html) ?? string.Empty;
+
+            // HTML 内で参照されている cid をセットにしておく
+            var usedCids = ExtractCidSetFromHtml(html);
+
+            foreach (var part in message.BodyParts)
+            {
+                if (part is not MimePart mp)
+                    continue;
+
+                var disp = mp.ContentDisposition;
+
+                // 1. 明示的な attachment は無条件で添付扱い
+                if (disp != null && disp.Disposition == ContentDisposition.Attachment)
+                    return true;
+
+                // 2. inline の扱いを UI と同期させる
+                if (disp != null && disp.Disposition == ContentDisposition.Inline)
+                {
+                    var cid = mp.ContentId?.Trim('<', '>') ?? string.Empty;
+
+                    // ★ 先に Outlook 判定をする（本文で使われていても添付扱いにしたい）
+                    if (IsOutlookInline(mp))
+                    {
+                        return true;
+                    }
+
+                    // ここから先は「普通の本文画像」の扱い
+                    if (!string.IsNullOrEmpty(cid) && usedCids.Contains(cid))
+                    {
+                        // HTML から参照されている → 本文画像 → 添付扱いにしない
+                        continue;
+                    }
+
+                    continue;
+                }
+            }
+            // 添付なし
+            return false;
+        }
+
+        private static HashSet<string> ExtractCidSetFromHtml(string html)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(html))
+                return set;
+
+            // ざっくりで十分：cid:xxxx を拾う
+            var regex = new System.Text.RegularExpressions.Regex(
+                @"cid:([0-9a-zA-Z\-_.@]+)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            var m = regex.Match(html);
+            while (m.Success)
+            {
+                var cid = m.Groups[1].Value;
+                if (!string.IsNullOrEmpty(cid))
+                    set.Add(cid);
+                m = m.NextMatch();
+            }
+
+            return set;
+        }
+
+        private static bool IsOutlookInline(MimePart mp)
+        {
+            var file = mp.FileName?.ToLower() ?? string.Empty;
+            var cid = mp.ContentId?.Trim('<', '>') ?? string.Empty;
+
+            // Content-ID が GUID 形式なら Outlook 系とみなす
+            if (Regex.IsMatch(
+                    cid,
+                    @"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                    RegexOptions.IgnoreCase))
+                return true;
+
+            // 既存のファイル名パターンも残しておく
+            if (Regex.IsMatch(
+                    file,
+                    @"^(image[_\d\s\(\)]+|oig\d*\s*\(\d+\))\.(png|jpg|jpeg|jfif|gif)$",
+                    RegexOptions.IgnoreCase))
+                return true;
+
+            return false;
         }
     }
 }
