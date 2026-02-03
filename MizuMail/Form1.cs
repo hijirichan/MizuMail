@@ -7,6 +7,7 @@ using MimeKit;
 using MimeKit.Text;
 using Newtonsoft.Json;
 using NLog;
+using NLog.Targets;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -53,7 +54,6 @@ namespace MizuMail
 
         private System.Windows.Forms.Timer resizeTimer;
         private int updateListViewCount = 0;
-        private DateTime updateListViewStart = DateTime.MinValue;
         HashSet<MailFolder> updatedFolders = new HashSet<MailFolder>();
         private List<Mail> _virtualList = new List<Mail>();
         private Dictionary<MailFolder, TreeNode> folderNodeMap = new Dictionary<MailFolder, TreeNode>();
@@ -659,6 +659,7 @@ namespace MizuMail
 
             // ② 設定読み込み
             LoadSettings();
+            LoadBlockedList();
             LoadRules();
 
             // ③ mbox フォルダ構造保証
@@ -1174,6 +1175,7 @@ namespace MizuMail
                 menuSaveAs.Enabled = false;
                 menuSpeechMail.Enabled = false;
                 menuAddToAddressBook.Enabled = false;
+                menuAddBlackListMail.Enabled = false;
                 menuUndoTags.Enabled = false;
                 menuRedoTags.Enabled = false;
                 menuAttachmentFileAllSave.Enabled = false;
@@ -1219,6 +1221,7 @@ namespace MizuMail
             menuSaveAs.Enabled = hasOne;
             menuSpeechMail.Enabled = hasOne;
             menuAddToAddressBook.Enabled = hasOne;
+            menuAddBlackListMail.Enabled = hasOne;
             menuUndoTags.Enabled = hasOne && tagUndoStack.Count > 0;
             menuRedoTags.Enabled = hasOne && tagRedoStack.Count > 0;
             menuAttachmentFileAllSave.Enabled = hasOne && buttonAtachMenu.DropDownItems.Count > 0;
@@ -3478,6 +3481,14 @@ namespace MizuMail
 
             string oldPath = mail.mailPath;
 
+            // ブラックリスト判定
+            if (blockedList.blockedEmails.Contains(mail.From.Address))
+            {
+                MoveMailWithUndo(mail, folderManager.Spam);
+                UpdateMailCacheAfterMove(oldPath, mail);
+                return;
+            }
+
             foreach (var rule in rules)
             {
                 bool match = false;
@@ -4016,7 +4027,7 @@ namespace MizuMail
             return SystemIcons.WinLogo; // fallback
         }
 
-        private void menuLocalFiltter_Click(object sender, EventArgs e)
+        private void menuLocalFilter_Click(object sender, EventArgs e)
         {
             ApplyLocalFilters();
             BuildTree();
@@ -4057,6 +4068,14 @@ namespace MizuMail
             string fromFull = mail.from ?? "";
             string fromAddress = ExtractAddress(fromFull);
             string oldPath = mail.mailPath;
+
+            // ブラックリスト判定
+            if (blockedList.blockedEmails.Contains(mail.From.Address))
+            {
+                MoveMailWithUndo(mail, folderManager.Spam);
+                UpdateMailCacheAfterMove(oldPath, mail);
+                return;
+            }
 
             foreach (var rule in rules)
             {
@@ -5042,6 +5061,91 @@ namespace MizuMail
                 return true;
 
             return false;
+        }
+
+        private BlockedList blockedList;
+
+        private void LoadBlockedList()
+        {
+            string path = Path.Combine(Application.StartupPath, "blocked.json");
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    var json = File.ReadAllText(path);
+
+                    // 空ファイル対策
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        blockedList = new BlockedList();
+                        return;
+                    }
+
+                    blockedList = JsonConvert.DeserializeObject<BlockedList>(json);
+
+                    // null 対策
+                    if (blockedList == null)
+                        blockedList = new BlockedList();
+                }
+                else
+                {
+                    blockedList = new BlockedList();
+                }
+            }
+            catch
+            {
+                // JSON 壊れてた場合も初期化
+                blockedList = new BlockedList();
+            }
+        }
+
+        private void SaveBlockedList()
+        {
+            string path = Path.Combine(Application.StartupPath, "blocked.json");
+            var json = JsonConvert.SerializeObject(blockedList, Formatting.Indented);
+            File.WriteAllText(path, json);
+        }
+
+        private void menuAddBlackListMail_Click(object sender, EventArgs e)
+        {
+            if (currentMail == null)
+                return;
+
+            string addr = currentMail.From.Address;
+
+            // ブラックリストに追加
+            if (!blockedList.blockedEmails.Contains(addr))
+            {
+                blockedList.blockedEmails.Add(addr);
+                SaveBlockedList();
+            }
+
+            // ① 今選択しているメールを迷惑メールへ
+            MoveMailWithUndo(currentMail, folderManager.Spam);
+
+            // ② 同じアドレスの既存メールもまとめて移動
+            foreach (var mail in mailCache.Values)
+            {
+                if (mail == currentMail)
+                    continue;
+
+                if (mail.From.Address == addr && mail.Folder != folderManager.Spam)
+                {
+                    string oldPath = mail.mailPath;
+                    MoveMailWithUndo(mail, folderManager.Spam);
+                    UpdateMailCacheAfterMove(oldPath, mail);
+                }
+            }
+
+            UpdateTreeView();
+            UpdateListView();
+        }
+
+        private void menuEditBlackListMailAddress_Click(object sender, EventArgs e)
+        {
+            var dlg = new FormBlacklistEditor(blockedList, SaveBlockedList);
+            dlg.ShowDialog();
         }
     }
 }
