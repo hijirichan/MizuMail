@@ -28,7 +28,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace MizuMail
 {
@@ -660,6 +659,7 @@ namespace MizuMail
             // ② 設定読み込み
             LoadSettings();
             LoadBlockedList();
+            LoadWhiteList();
             LoadRules();
 
             // ③ mbox フォルダ構造保証
@@ -1176,6 +1176,7 @@ namespace MizuMail
                 menuSpeechMail.Enabled = false;
                 menuAddToAddressBook.Enabled = false;
                 menuAddBlackListMail.Enabled = false;
+                menuAddWhiteListMail.Enabled = false;
                 menuUndoTags.Enabled = false;
                 menuRedoTags.Enabled = false;
                 menuAttachmentFileAllSave.Enabled = false;
@@ -1222,6 +1223,7 @@ namespace MizuMail
             menuSpeechMail.Enabled = hasOne;
             menuAddToAddressBook.Enabled = hasOne;
             menuAddBlackListMail.Enabled = hasOne;
+            menuAddWhiteListMail.Enabled = hasOne;
             menuUndoTags.Enabled = hasOne && tagUndoStack.Count > 0;
             menuRedoTags.Enabled = hasOne && tagRedoStack.Count > 0;
             menuAttachmentFileAllSave.Enabled = hasOne && buttonAtachMenu.DropDownItems.Count > 0;
@@ -3481,11 +3483,20 @@ namespace MizuMail
 
             string oldPath = mail.mailPath;
 
+            // ホワイトリスト判定
+            if (whiteList.whiteEmails.Contains(mail.From.Address))
+            {
+                // ホワイトリストは何もしない
+                return;
+            }
+
             // ブラックリスト判定
             if (blockedList.blockedEmails.Contains(mail.From.Address))
             {
                 MoveMailWithUndo(mail, folderManager.Spam);
                 UpdateMailCacheAfterMove(oldPath, mail);
+                UpdateTreeView();
+                UpdateListView();
                 return;
             }
 
@@ -3532,6 +3543,8 @@ namespace MizuMail
                 {
                     MoveMailWithUndo(mail, folderManager.Spam);
                     UpdateMailCacheAfterMove(oldPath, mail);
+                    UpdateTreeView();
+                    UpdateListView();
                     return;
                 }
 
@@ -3553,6 +3566,8 @@ namespace MizuMail
                     {
                         MoveMailWithUndo(mail, target);
                         UpdateMailCacheAfterMove(oldPath, mail);
+                        UpdateTreeView();
+                        UpdateListView();
                     }
                 }
 
@@ -4069,11 +4084,20 @@ namespace MizuMail
             string fromAddress = ExtractAddress(fromFull);
             string oldPath = mail.mailPath;
 
+            // ホワイトリスト判定
+            if (whiteList.whiteEmails.Contains(mail.From.Address))
+            {
+                // ホワイトリストは何もしない
+                return;
+            }
+
             // ブラックリスト判定
             if (blockedList.blockedEmails.Contains(mail.From.Address))
             {
                 MoveMailWithUndo(mail, folderManager.Spam);
                 UpdateMailCacheAfterMove(oldPath, mail);
+                UpdateTreeView();
+                UpdateListView();
                 return;
             }
 
@@ -4131,6 +4155,8 @@ namespace MizuMail
                     {
                         MoveMailWithUndo(mail, target);
                         UpdateMailCacheAfterMove(oldPath, mail);
+                        UpdateTreeView();
+                        UpdateListView();
                     }
                 }
 
@@ -5064,6 +5090,7 @@ namespace MizuMail
         }
 
         private BlockedList blockedList;
+        private WhiteList whiteList;
 
         private void LoadBlockedList()
         {
@@ -5100,10 +5127,52 @@ namespace MizuMail
             }
         }
 
+        private void LoadWhiteList()
+        {
+            string path = Path.Combine(Application.StartupPath, "whitelist.json");
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    var json = File.ReadAllText(path);
+
+                    // 空ファイル対策
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        whiteList = new WhiteList();
+                        return;
+                    }
+
+                    whiteList = JsonConvert.DeserializeObject<WhiteList>(json);
+
+                    // null 対策
+                    if (whiteList == null)
+                        whiteList = new WhiteList();
+                }
+                else
+                {
+                    whiteList = new WhiteList();
+                }
+            }
+            catch
+            {
+                // JSON 壊れてた場合も初期化
+                whiteList = new WhiteList();
+            }
+        }
+
         private void SaveBlockedList()
         {
             string path = Path.Combine(Application.StartupPath, "blocked.json");
             var json = JsonConvert.SerializeObject(blockedList, Formatting.Indented);
+            File.WriteAllText(path, json);
+        }
+
+        private void SaveWhiteList()
+        {
+            string path = Path.Combine(Application.StartupPath, "whitelist.json");
+            var json = JsonConvert.SerializeObject(whiteList, Formatting.Indented);
             File.WriteAllText(path, json);
         }
 
@@ -5144,8 +5213,29 @@ namespace MizuMail
 
         private void menuEditBlackListMailAddress_Click(object sender, EventArgs e)
         {
-            var dlg = new FormBlacklistEditor(blockedList, SaveBlockedList);
+            var dlg = new FormListEditor("ブラックリストメールアドレスの編集", blockedList.blockedEmails, SaveBlockedList);
             dlg.ShowDialog();
+        }
+
+        private void menuEditWhiteListMailAddress_Click(object sender, EventArgs e)
+        {
+            var dlg = new FormListEditor("ホワイトリストメールアドレスの編集", whiteList.whiteEmails, SaveWhiteList);
+            dlg.ShowDialog();
+        }
+
+        private void menuAddWhiteListMail_Click(object sender, EventArgs e)
+        {
+            if (currentMail == null)
+                return;
+
+            string addr = currentMail.From.Address;
+
+            // ホワイトリストに追加
+            if (!whiteList.whiteEmails.Contains(addr))
+            {
+                whiteList.whiteEmails.Add(addr);
+                SaveWhiteList();
+            }
         }
     }
 }

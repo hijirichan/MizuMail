@@ -1,6 +1,6 @@
 ﻿namespace MizuMail
 {
-    partial class FormBlacklistEditor
+    partial class FormListEditor
     {
         /// <summary>
         /// Required designer variable.
@@ -28,33 +28,33 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.label1 = new System.Windows.Forms.Label();
-            this.listBlackListMail = new System.Windows.Forms.ListBox();
+            this.labelMailList = new System.Windows.Forms.Label();
+            this.listMailAddress = new System.Windows.Forms.ListBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.textAddBlackListMailAddress = new System.Windows.Forms.TextBox();
-            this.buttonAddBlackListMailAddress = new System.Windows.Forms.Button();
+            this.textAddListMailAddress = new System.Windows.Forms.TextBox();
+            this.buttonAddListMailAddress = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.buttonDeleteBlackListMailAddress = new System.Windows.Forms.Button();
             this.buttonClose = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // label1
+            // labelMailList
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 9);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(214, 15);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "ブロックされているメールアドレス一覧";
+            this.labelMailList.AutoSize = true;
+            this.labelMailList.Location = new System.Drawing.Point(12, 9);
+            this.labelMailList.Name = "labelMailList";
+            this.labelMailList.Size = new System.Drawing.Size(115, 15);
+            this.labelMailList.TabIndex = 0;
+            this.labelMailList.Text = "メールアドレス一覧";
             // 
-            // listBlackListMail
+            // listMailAddress
             // 
-            this.listBlackListMail.FormattingEnabled = true;
-            this.listBlackListMail.ItemHeight = 15;
-            this.listBlackListMail.Location = new System.Drawing.Point(15, 27);
-            this.listBlackListMail.Name = "listBlackListMail";
-            this.listBlackListMail.Size = new System.Drawing.Size(534, 199);
-            this.listBlackListMail.TabIndex = 1;
+            this.listMailAddress.FormattingEnabled = true;
+            this.listMailAddress.ItemHeight = 15;
+            this.listMailAddress.Location = new System.Drawing.Point(15, 27);
+            this.listMailAddress.Name = "listMailAddress";
+            this.listMailAddress.Size = new System.Drawing.Size(534, 199);
+            this.listMailAddress.TabIndex = 1;
             // 
             // label2
             // 
@@ -65,22 +65,22 @@
             this.label2.TabIndex = 2;
             this.label2.Text = "追加:";
             // 
-            // textAddBlackListMailAddress
+            // textAddListMailAddress
             // 
-            this.textAddBlackListMailAddress.Location = new System.Drawing.Point(58, 236);
-            this.textAddBlackListMailAddress.Name = "textAddBlackListMailAddress";
-            this.textAddBlackListMailAddress.Size = new System.Drawing.Size(393, 22);
-            this.textAddBlackListMailAddress.TabIndex = 3;
+            this.textAddListMailAddress.Location = new System.Drawing.Point(58, 236);
+            this.textAddListMailAddress.Name = "textAddListMailAddress";
+            this.textAddListMailAddress.Size = new System.Drawing.Size(393, 22);
+            this.textAddListMailAddress.TabIndex = 3;
             // 
-            // buttonAddBlackListMailAddress
+            // buttonAddListMailAddress
             // 
-            this.buttonAddBlackListMailAddress.Location = new System.Drawing.Point(457, 232);
-            this.buttonAddBlackListMailAddress.Name = "buttonAddBlackListMailAddress";
-            this.buttonAddBlackListMailAddress.Size = new System.Drawing.Size(92, 33);
-            this.buttonAddBlackListMailAddress.TabIndex = 4;
-            this.buttonAddBlackListMailAddress.Text = "追加";
-            this.buttonAddBlackListMailAddress.UseVisualStyleBackColor = true;
-            this.buttonAddBlackListMailAddress.Click += new System.EventHandler(this.buttonAddBlackListMailAddress_Click);
+            this.buttonAddListMailAddress.Location = new System.Drawing.Point(457, 232);
+            this.buttonAddListMailAddress.Name = "buttonAddListMailAddress";
+            this.buttonAddListMailAddress.Size = new System.Drawing.Size(92, 33);
+            this.buttonAddListMailAddress.TabIndex = 4;
+            this.buttonAddListMailAddress.Text = "追加";
+            this.buttonAddListMailAddress.UseVisualStyleBackColor = true;
+            this.buttonAddListMailAddress.Click += new System.EventHandler(this.buttonAddListMailAddress_Click);
             // 
             // label3
             // 
@@ -99,7 +99,7 @@
             this.buttonDeleteBlackListMailAddress.TabIndex = 6;
             this.buttonDeleteBlackListMailAddress.Text = "削除";
             this.buttonDeleteBlackListMailAddress.UseVisualStyleBackColor = true;
-            this.buttonDeleteBlackListMailAddress.Click += new System.EventHandler(this.buttonDeleteBlackListMailAddress_Click);
+            this.buttonDeleteBlackListMailAddress.Click += new System.EventHandler(this.buttonDeleteListMailAddress_Click);
             // 
             // buttonClose
             // 
@@ -111,7 +111,7 @@
             this.buttonClose.UseVisualStyleBackColor = true;
             this.buttonClose.Click += new System.EventHandler(this.buttonClose_Click);
             // 
-            // FormBlacklistEditor
+            // FormListEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -119,17 +119,18 @@
             this.Controls.Add(this.buttonClose);
             this.Controls.Add(this.buttonDeleteBlackListMailAddress);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.buttonAddBlackListMailAddress);
-            this.Controls.Add(this.textAddBlackListMailAddress);
+            this.Controls.Add(this.buttonAddListMailAddress);
+            this.Controls.Add(this.textAddListMailAddress);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.listBlackListMail);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.listMailAddress);
+            this.Controls.Add(this.labelMailList);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "FormBlacklistEditor";
+            this.Name = "FormListEditor";
             this.ShowInTaskbar = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "ブラックリストメールアドレスの編集";
+            this.Text = "メールリスト編集";
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -137,13 +138,13 @@
 
         #endregion
 
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label labelMailList;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox textAddBlackListMailAddress;
-        private System.Windows.Forms.Button buttonAddBlackListMailAddress;
+        private System.Windows.Forms.TextBox textAddListMailAddress;
+        private System.Windows.Forms.Button buttonAddListMailAddress;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Button buttonDeleteBlackListMailAddress;
         private System.Windows.Forms.Button buttonClose;
-        private System.Windows.Forms.ListBox listBlackListMail;
+        private System.Windows.Forms.ListBox listMailAddress;
     }
 }

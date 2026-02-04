@@ -30,18 +30,18 @@ namespace MizuMail
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.TreeNode treeNode7 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
-            System.Windows.Forms.TreeNode treeNode8 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
-            System.Windows.Forms.TreeNode treeNode9 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
-            System.Windows.Forms.TreeNode treeNode10 = new System.Windows.Forms.TreeNode("下書き");
-            System.Windows.Forms.TreeNode treeNode11 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
-            System.Windows.Forms.TreeNode treeNode12 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
-            treeNode7,
-            treeNode8,
-            treeNode9,
-            treeNode10,
-            treeNode11});
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormMain));
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("受信メール(0)", 1, 1);
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("迷惑メール(0)");
+            System.Windows.Forms.TreeNode treeNode3 = new System.Windows.Forms.TreeNode("送信メール(0)", 2, 2);
+            System.Windows.Forms.TreeNode treeNode4 = new System.Windows.Forms.TreeNode("下書き");
+            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("ごみ箱(0)");
+            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("メール", new System.Windows.Forms.TreeNode[] {
+            treeNode1,
+            treeNode2,
+            treeNode3,
+            treeNode4,
+            treeNode5});
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.ファイルFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSaveAs = new System.Windows.Forms.ToolStripMenuItem();
@@ -62,6 +62,9 @@ namespace MizuMail
             this.menuAccountSetting = new System.Windows.Forms.ToolStripMenuItem();
             this.menuRuleEdit = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSignatureSetting = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem11 = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuEditBlackListMailAddress = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuEditWhiteListMailAddress = new System.Windows.Forms.ToolStripMenuItem();
             this.ツールTToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuLocalFilter = new System.Windows.Forms.ToolStripMenuItem();
             this.menuAddressBook = new System.Windows.Forms.ToolStripMenuItem();
@@ -75,14 +78,23 @@ namespace MizuMail
             this.labelMessage = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolMailProgress = new System.Windows.Forms.ToolStripProgressBar();
             this.labelDate = new System.Windows.Forms.ToolStripStatusLabel();
+            this.buttonAtachMenu = new System.Windows.Forms.ToolStripDropDownButton();
             this.toolMain = new System.Windows.Forms.ToolStrip();
+            this.toolSendButton = new System.Windows.Forms.ToolStripButton();
+            this.toolReceiveButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolNewButton = new System.Windows.Forms.ToolStripButton();
+            this.toolReplyButton = new System.Windows.Forms.ToolStripButton();
+            this.toolDeleteButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolShowHeader = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolHelpButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toolFilterCombo = new System.Windows.Forms.ToolStripComboBox();
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.textSearch = new System.Windows.Forms.ToolStripTextBox();
+            this.toolSearchButton = new System.Windows.Forms.ToolStripButton();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.treeMain = new System.Windows.Forms.TreeView();
             this.contextMenuStrip2 = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -112,6 +124,8 @@ namespace MizuMail
             this.menuSpeechMail = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem9 = new System.Windows.Forms.ToolStripSeparator();
             this.menuAddToAddressBook = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAddBlackListMail = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuAddWhiteListMail = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem10 = new System.Windows.Forms.ToolStripSeparator();
             this.menuEditTags = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
@@ -121,17 +135,6 @@ namespace MizuMail
             this.richTextBody = new System.Windows.Forms.RichTextBox();
             this.timerMain = new System.Windows.Forms.Timer(this.components);
             this.timerAutoReceive = new System.Windows.Forms.Timer(this.components);
-            this.menuAddBlackListMail = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolSendButton = new System.Windows.Forms.ToolStripButton();
-            this.toolReceiveButton = new System.Windows.Forms.ToolStripButton();
-            this.toolNewButton = new System.Windows.Forms.ToolStripButton();
-            this.toolReplyButton = new System.Windows.Forms.ToolStripButton();
-            this.toolDeleteButton = new System.Windows.Forms.ToolStripButton();
-            this.toolShowHeader = new System.Windows.Forms.ToolStripButton();
-            this.toolHelpButton = new System.Windows.Forms.ToolStripButton();
-            this.toolSearchButton = new System.Windows.Forms.ToolStripButton();
-            this.buttonAtachMenu = new System.Windows.Forms.ToolStripDropDownButton();
-            this.menuEditBlackListMailAddress = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.statusStrip1.SuspendLayout();
             this.toolMain.SuspendLayout();
@@ -292,7 +295,7 @@ namespace MizuMail
             this.menuAccountSetting,
             this.menuRuleEdit,
             this.menuSignatureSetting,
-            this.menuEditBlackListMailAddress});
+            this.toolStripMenuItem11});
             this.設定SToolStripMenuItem.Name = "設定SToolStripMenuItem";
             this.設定SToolStripMenuItem.Size = new System.Drawing.Size(71, 24);
             this.設定SToolStripMenuItem.Text = "設定(&S)";
@@ -300,7 +303,7 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(271, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
@@ -308,16 +311,39 @@ namespace MizuMail
             // menuRuleEdit
             // 
             this.menuRuleEdit.Name = "menuRuleEdit";
-            this.menuRuleEdit.Size = new System.Drawing.Size(271, 26);
+            this.menuRuleEdit.Size = new System.Drawing.Size(224, 26);
             this.menuRuleEdit.Text = "振り分け設定(&R)";
             this.menuRuleEdit.Click += new System.EventHandler(this.menuRuleEdit_Click);
             // 
             // menuSignatureSetting
             // 
             this.menuSignatureSetting.Name = "menuSignatureSetting";
-            this.menuSignatureSetting.Size = new System.Drawing.Size(271, 26);
+            this.menuSignatureSetting.Size = new System.Drawing.Size(224, 26);
             this.menuSignatureSetting.Text = "署名の設定(&S)";
             this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
+            // 
+            // toolStripMenuItem11
+            // 
+            this.toolStripMenuItem11.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuEditBlackListMailAddress,
+            this.menuEditWhiteListMailAddress});
+            this.toolStripMenuItem11.Name = "toolStripMenuItem11";
+            this.toolStripMenuItem11.Size = new System.Drawing.Size(224, 26);
+            this.toolStripMenuItem11.Text = "迷惑メール対策(&P)";
+            // 
+            // menuEditBlackListMailAddress
+            // 
+            this.menuEditBlackListMailAddress.Name = "menuEditBlackListMailAddress";
+            this.menuEditBlackListMailAddress.Size = new System.Drawing.Size(224, 26);
+            this.menuEditBlackListMailAddress.Text = "ブラックリスト編集(&B)";
+            this.menuEditBlackListMailAddress.Click += new System.EventHandler(this.menuEditBlackListMailAddress_Click);
+            // 
+            // menuEditWhiteListMailAddress
+            // 
+            this.menuEditWhiteListMailAddress.Name = "menuEditWhiteListMailAddress";
+            this.menuEditWhiteListMailAddress.Size = new System.Drawing.Size(224, 26);
+            this.menuEditWhiteListMailAddress.Text = "ホワイトリスト編集(&W)";
+            this.menuEditWhiteListMailAddress.Click += new System.EventHandler(this.menuEditWhiteListMailAddress_Click);
             // 
             // ツールTToolStripMenuItem
             // 
@@ -433,6 +459,19 @@ namespace MizuMail
             this.labelDate.Text = "現在日時";
             this.labelDate.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             // 
+            // buttonAtachMenu
+            // 
+            this.buttonAtachMenu.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.buttonAtachMenu.Image = ((System.Drawing.Image)(resources.GetObject("buttonAtachMenu.Image")));
+            this.buttonAtachMenu.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.buttonAtachMenu.MergeAction = System.Windows.Forms.MergeAction.Insert;
+            this.buttonAtachMenu.Name = "buttonAtachMenu";
+            this.buttonAtachMenu.Size = new System.Drawing.Size(34, 28);
+            this.buttonAtachMenu.Text = "toolStripDropDownButton1";
+            this.buttonAtachMenu.ToolTipText = "添付ファイルが存在するときのメニュー";
+            this.buttonAtachMenu.Visible = false;
+            this.buttonAtachMenu.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.buttonAtachMenu_DropDownItemClicked);
+            // 
             // toolMain
             // 
             this.toolMain.ImageScalingSize = new System.Drawing.Size(20, 20);
@@ -458,20 +497,87 @@ namespace MizuMail
             this.toolMain.TabIndex = 2;
             this.toolMain.Text = "toolStrip1";
             // 
+            // toolSendButton
+            // 
+            this.toolSendButton.Image = ((System.Drawing.Image)(resources.GetObject("toolSendButton.Image")));
+            this.toolSendButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolSendButton.Name = "toolSendButton";
+            this.toolSendButton.Size = new System.Drawing.Size(63, 25);
+            this.toolSendButton.Text = "送信";
+            this.toolSendButton.Click += new System.EventHandler(this.toolSendButton_Click);
+            // 
+            // toolReceiveButton
+            // 
+            this.toolReceiveButton.Image = ((System.Drawing.Image)(resources.GetObject("toolReceiveButton.Image")));
+            this.toolReceiveButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolReceiveButton.Name = "toolReceiveButton";
+            this.toolReceiveButton.Size = new System.Drawing.Size(63, 25);
+            this.toolReceiveButton.Text = "受信";
+            this.toolReceiveButton.Click += new System.EventHandler(this.toolReceiveButton_Click);
+            // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(6, 28);
+            // 
+            // toolNewButton
+            // 
+            this.toolNewButton.Image = ((System.Drawing.Image)(resources.GetObject("toolNewButton.Image")));
+            this.toolNewButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolNewButton.Name = "toolNewButton";
+            this.toolNewButton.Size = new System.Drawing.Size(93, 25);
+            this.toolNewButton.Text = "新規作成";
+            this.toolNewButton.Click += new System.EventHandler(this.toolNewButton_Click);
+            // 
+            // toolReplyButton
+            // 
+            this.toolReplyButton.Enabled = false;
+            this.toolReplyButton.Image = ((System.Drawing.Image)(resources.GetObject("toolReplyButton.Image")));
+            this.toolReplyButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolReplyButton.Name = "toolReplyButton";
+            this.toolReplyButton.Size = new System.Drawing.Size(63, 25);
+            this.toolReplyButton.Text = "返信";
+            this.toolReplyButton.Click += new System.EventHandler(this.toolReplyButton_Click);
+            // 
+            // toolDeleteButton
+            // 
+            this.toolDeleteButton.Enabled = false;
+            this.toolDeleteButton.Image = ((System.Drawing.Image)(resources.GetObject("toolDeleteButton.Image")));
+            this.toolDeleteButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolDeleteButton.Name = "toolDeleteButton";
+            this.toolDeleteButton.Size = new System.Drawing.Size(63, 25);
+            this.toolDeleteButton.Text = "削除";
+            this.toolDeleteButton.Click += new System.EventHandler(this.toolDeleteButton_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new System.Drawing.Size(6, 28);
             // 
+            // toolShowHeader
+            // 
+            this.toolShowHeader.CheckOnClick = true;
+            this.toolShowHeader.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.toolShowHeader.Image = ((System.Drawing.Image)(resources.GetObject("toolShowHeader.Image")));
+            this.toolShowHeader.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolShowHeader.Name = "toolShowHeader";
+            this.toolShowHeader.Size = new System.Drawing.Size(77, 25);
+            this.toolShowHeader.Text = "ヘッダ表示";
+            this.toolShowHeader.Click += new System.EventHandler(this.toolShowHeader_Click);
+            // 
             // toolStripSeparator6
             // 
             this.toolStripSeparator6.Name = "toolStripSeparator6";
             this.toolStripSeparator6.Size = new System.Drawing.Size(6, 28);
+            // 
+            // toolHelpButton
+            // 
+            this.toolHelpButton.Image = ((System.Drawing.Image)(resources.GetObject("toolHelpButton.Image")));
+            this.toolHelpButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolHelpButton.Name = "toolHelpButton";
+            this.toolHelpButton.Size = new System.Drawing.Size(68, 25);
+            this.toolHelpButton.Text = "ヘルプ";
+            this.toolHelpButton.Click += new System.EventHandler(this.menuHelpView_Click);
             // 
             // toolStripSeparator3
             // 
@@ -499,6 +605,15 @@ namespace MizuMail
             this.textSearch.Font = new System.Drawing.Font("Yu Gothic UI", 9F);
             this.textSearch.Name = "textSearch";
             this.textSearch.Size = new System.Drawing.Size(200, 28);
+            // 
+            // toolSearchButton
+            // 
+            this.toolSearchButton.Image = ((System.Drawing.Image)(resources.GetObject("toolSearchButton.Image")));
+            this.toolSearchButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolSearchButton.Name = "toolSearchButton";
+            this.toolSearchButton.Size = new System.Drawing.Size(63, 25);
+            this.toolSearchButton.Text = "検索";
+            this.toolSearchButton.Click += new System.EventHandler(this.toolSearchButton_Click);
             // 
             // splitContainer1
             // 
@@ -529,27 +644,27 @@ namespace MizuMail
             this.treeMain.Location = new System.Drawing.Point(0, 0);
             this.treeMain.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.treeMain.Name = "treeMain";
-            treeNode7.ImageIndex = 1;
-            treeNode7.Name = "nodeReceive";
-            treeNode7.SelectedImageIndex = 1;
-            treeNode7.Text = "受信メール(0)";
-            treeNode8.Name = "nodeSpam";
-            treeNode8.Text = "迷惑メール(0)";
-            treeNode9.ImageIndex = 2;
-            treeNode9.Name = "nodeSend";
-            treeNode9.SelectedImageIndex = 2;
-            treeNode9.Text = "送信メール(0)";
-            treeNode10.ImageIndex = 3;
-            treeNode10.Name = "nodeDraft";
-            treeNode10.Text = "下書き";
-            treeNode11.ImageIndex = 4;
-            treeNode11.Name = "nodeDelete";
-            treeNode11.Text = "ごみ箱(0)";
-            treeNode12.ImageIndex = 0;
-            treeNode12.Name = "rootMail";
-            treeNode12.Text = "メール";
+            treeNode1.ImageIndex = 1;
+            treeNode1.Name = "nodeReceive";
+            treeNode1.SelectedImageIndex = 1;
+            treeNode1.Text = "受信メール(0)";
+            treeNode2.Name = "nodeSpam";
+            treeNode2.Text = "迷惑メール(0)";
+            treeNode3.ImageIndex = 2;
+            treeNode3.Name = "nodeSend";
+            treeNode3.SelectedImageIndex = 2;
+            treeNode3.Text = "送信メール(0)";
+            treeNode4.ImageIndex = 3;
+            treeNode4.Name = "nodeDraft";
+            treeNode4.Text = "下書き";
+            treeNode5.ImageIndex = 4;
+            treeNode5.Name = "nodeDelete";
+            treeNode5.Text = "ごみ箱(0)";
+            treeNode6.ImageIndex = 0;
+            treeNode6.Name = "rootMail";
+            treeNode6.Text = "メール";
             this.treeMain.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode12});
+            treeNode6});
             this.treeMain.SelectedImageIndex = 0;
             this.treeMain.Size = new System.Drawing.Size(262, 519);
             this.treeMain.TabIndex = 0;
@@ -718,99 +833,114 @@ namespace MizuMail
             this.toolStripMenuItem9,
             this.menuAddToAddressBook,
             this.menuAddBlackListMail,
+            this.menuAddWhiteListMail,
             this.toolStripMenuItem10,
             this.menuEditTags,
             this.toolStripSeparator7,
             this.menuUndoTags,
             this.menuRedoTags});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(304, 274);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(322, 298);
             // 
             // menuDelete
             // 
             this.menuDelete.Name = "menuDelete";
-            this.menuDelete.Size = new System.Drawing.Size(303, 24);
+            this.menuDelete.Size = new System.Drawing.Size(321, 24);
             this.menuDelete.Text = "削除(&D)";
             this.menuDelete.Click += new System.EventHandler(this.menuDelete_Click);
             // 
             // menuUndoMail
             // 
             this.menuUndoMail.Name = "menuUndoMail";
-            this.menuUndoMail.Size = new System.Drawing.Size(303, 24);
+            this.menuUndoMail.Size = new System.Drawing.Size(321, 24);
             this.menuUndoMail.Text = "元に戻す(&U)";
             this.menuUndoMail.Click += new System.EventHandler(this.menuUndoMail_Click);
             // 
             // toolStripMenuItem6
             // 
             this.toolStripMenuItem6.Name = "toolStripMenuItem6";
-            this.toolStripMenuItem6.Size = new System.Drawing.Size(300, 6);
+            this.toolStripMenuItem6.Size = new System.Drawing.Size(318, 6);
             // 
             // menuNotReadYet
             // 
             this.menuNotReadYet.Name = "menuNotReadYet";
-            this.menuNotReadYet.Size = new System.Drawing.Size(303, 24);
+            this.menuNotReadYet.Size = new System.Drawing.Size(321, 24);
             this.menuNotReadYet.Text = "未読みにする(&N)";
             this.menuNotReadYet.Click += new System.EventHandler(this.menuNotReadYet_Click);
             // 
             // menuRead
             // 
             this.menuRead.Name = "menuRead";
-            this.menuRead.Size = new System.Drawing.Size(303, 24);
+            this.menuRead.Size = new System.Drawing.Size(321, 24);
             this.menuRead.Text = "既読にする(&Y)";
             this.menuRead.Click += new System.EventHandler(this.menuRead_Click);
             // 
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
-            this.toolStripSeparator5.Size = new System.Drawing.Size(300, 6);
+            this.toolStripSeparator5.Size = new System.Drawing.Size(318, 6);
             // 
             // menuSpeechMail
             // 
             this.menuSpeechMail.Name = "menuSpeechMail";
-            this.menuSpeechMail.Size = new System.Drawing.Size(303, 24);
+            this.menuSpeechMail.Size = new System.Drawing.Size(321, 24);
             this.menuSpeechMail.Text = "読み上げ(&R)";
             this.menuSpeechMail.Click += new System.EventHandler(this.menuSpeechMail_Click);
             // 
             // toolStripMenuItem9
             // 
             this.toolStripMenuItem9.Name = "toolStripMenuItem9";
-            this.toolStripMenuItem9.Size = new System.Drawing.Size(300, 6);
+            this.toolStripMenuItem9.Size = new System.Drawing.Size(318, 6);
             // 
             // menuAddToAddressBook
             // 
             this.menuAddToAddressBook.Name = "menuAddToAddressBook";
-            this.menuAddToAddressBook.Size = new System.Drawing.Size(303, 24);
+            this.menuAddToAddressBook.Size = new System.Drawing.Size(321, 24);
             this.menuAddToAddressBook.Text = "この人をアドレス帳に追加(&A)";
             this.menuAddToAddressBook.Click += new System.EventHandler(this.menuAddToAddressBook_Click);
+            // 
+            // menuAddBlackListMail
+            // 
+            this.menuAddBlackListMail.Name = "menuAddBlackListMail";
+            this.menuAddBlackListMail.Size = new System.Drawing.Size(321, 24);
+            this.menuAddBlackListMail.Text = "このアドレスを迷惑メールに指定する(&B)";
+            this.menuAddBlackListMail.Click += new System.EventHandler(this.menuAddBlackListMail_Click);
+            // 
+            // menuAddWhiteListMail
+            // 
+            this.menuAddWhiteListMail.Name = "menuAddWhiteListMail";
+            this.menuAddWhiteListMail.Size = new System.Drawing.Size(321, 24);
+            this.menuAddWhiteListMail.Text = "このアドレスをホワイトリストに指定する(&W)";
+            this.menuAddWhiteListMail.Click += new System.EventHandler(this.menuAddWhiteListMail_Click);
             // 
             // toolStripMenuItem10
             // 
             this.toolStripMenuItem10.Name = "toolStripMenuItem10";
-            this.toolStripMenuItem10.Size = new System.Drawing.Size(300, 6);
+            this.toolStripMenuItem10.Size = new System.Drawing.Size(318, 6);
             // 
             // menuEditTags
             // 
             this.menuEditTags.Name = "menuEditTags";
-            this.menuEditTags.Size = new System.Drawing.Size(303, 24);
+            this.menuEditTags.Size = new System.Drawing.Size(321, 24);
             this.menuEditTags.Text = "タグの編集(&T)";
             this.menuEditTags.Click += new System.EventHandler(this.menuEditTags_Click);
             // 
             // toolStripSeparator7
             // 
             this.toolStripSeparator7.Name = "toolStripSeparator7";
-            this.toolStripSeparator7.Size = new System.Drawing.Size(300, 6);
+            this.toolStripSeparator7.Size = new System.Drawing.Size(318, 6);
             // 
             // menuUndoTags
             // 
             this.menuUndoTags.Name = "menuUndoTags";
-            this.menuUndoTags.Size = new System.Drawing.Size(303, 24);
+            this.menuUndoTags.Size = new System.Drawing.Size(321, 24);
             this.menuUndoTags.Text = "タグのUndo";
             this.menuUndoTags.Click += new System.EventHandler(this.menuUndoTags_Click);
             // 
             // menuRedoTags
             // 
             this.menuRedoTags.Name = "menuRedoTags";
-            this.menuRedoTags.Size = new System.Drawing.Size(303, 24);
+            this.menuRedoTags.Size = new System.Drawing.Size(321, 24);
             this.menuRedoTags.Text = "タグのRedo";
             this.menuRedoTags.Click += new System.EventHandler(this.menuRedoTags_Click);
             // 
@@ -847,109 +977,6 @@ namespace MizuMail
             // timerAutoReceive
             // 
             this.timerAutoReceive.Tick += new System.EventHandler(this.timerAutoReceive_Tick);
-            // 
-            // menuAddBlackListMail
-            // 
-            this.menuAddBlackListMail.Name = "menuAddBlackListMail";
-            this.menuAddBlackListMail.Size = new System.Drawing.Size(303, 24);
-            this.menuAddBlackListMail.Text = "このアドレスを迷惑メールに指定する(&B)";
-            this.menuAddBlackListMail.Click += new System.EventHandler(this.menuAddBlackListMail_Click);
-            // 
-            // toolSendButton
-            // 
-            this.toolSendButton.Image = ((System.Drawing.Image)(resources.GetObject("toolSendButton.Image")));
-            this.toolSendButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolSendButton.Name = "toolSendButton";
-            this.toolSendButton.Size = new System.Drawing.Size(63, 25);
-            this.toolSendButton.Text = "送信";
-            this.toolSendButton.Click += new System.EventHandler(this.toolSendButton_Click);
-            // 
-            // toolReceiveButton
-            // 
-            this.toolReceiveButton.Image = ((System.Drawing.Image)(resources.GetObject("toolReceiveButton.Image")));
-            this.toolReceiveButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolReceiveButton.Name = "toolReceiveButton";
-            this.toolReceiveButton.Size = new System.Drawing.Size(63, 25);
-            this.toolReceiveButton.Text = "受信";
-            this.toolReceiveButton.Click += new System.EventHandler(this.toolReceiveButton_Click);
-            // 
-            // toolNewButton
-            // 
-            this.toolNewButton.Image = ((System.Drawing.Image)(resources.GetObject("toolNewButton.Image")));
-            this.toolNewButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolNewButton.Name = "toolNewButton";
-            this.toolNewButton.Size = new System.Drawing.Size(93, 25);
-            this.toolNewButton.Text = "新規作成";
-            this.toolNewButton.Click += new System.EventHandler(this.toolNewButton_Click);
-            // 
-            // toolReplyButton
-            // 
-            this.toolReplyButton.Enabled = false;
-            this.toolReplyButton.Image = ((System.Drawing.Image)(resources.GetObject("toolReplyButton.Image")));
-            this.toolReplyButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolReplyButton.Name = "toolReplyButton";
-            this.toolReplyButton.Size = new System.Drawing.Size(63, 25);
-            this.toolReplyButton.Text = "返信";
-            this.toolReplyButton.Click += new System.EventHandler(this.toolReplyButton_Click);
-            // 
-            // toolDeleteButton
-            // 
-            this.toolDeleteButton.Enabled = false;
-            this.toolDeleteButton.Image = ((System.Drawing.Image)(resources.GetObject("toolDeleteButton.Image")));
-            this.toolDeleteButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolDeleteButton.Name = "toolDeleteButton";
-            this.toolDeleteButton.Size = new System.Drawing.Size(63, 25);
-            this.toolDeleteButton.Text = "削除";
-            this.toolDeleteButton.Click += new System.EventHandler(this.toolDeleteButton_Click);
-            // 
-            // toolShowHeader
-            // 
-            this.toolShowHeader.CheckOnClick = true;
-            this.toolShowHeader.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.toolShowHeader.Image = ((System.Drawing.Image)(resources.GetObject("toolShowHeader.Image")));
-            this.toolShowHeader.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolShowHeader.Name = "toolShowHeader";
-            this.toolShowHeader.Size = new System.Drawing.Size(77, 25);
-            this.toolShowHeader.Text = "ヘッダ表示";
-            this.toolShowHeader.Click += new System.EventHandler(this.toolShowHeader_Click);
-            // 
-            // toolHelpButton
-            // 
-            this.toolHelpButton.Image = ((System.Drawing.Image)(resources.GetObject("toolHelpButton.Image")));
-            this.toolHelpButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolHelpButton.Name = "toolHelpButton";
-            this.toolHelpButton.Size = new System.Drawing.Size(68, 25);
-            this.toolHelpButton.Text = "ヘルプ";
-            this.toolHelpButton.Click += new System.EventHandler(this.menuHelpView_Click);
-            // 
-            // toolSearchButton
-            // 
-            this.toolSearchButton.Image = ((System.Drawing.Image)(resources.GetObject("toolSearchButton.Image")));
-            this.toolSearchButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.toolSearchButton.Name = "toolSearchButton";
-            this.toolSearchButton.Size = new System.Drawing.Size(63, 25);
-            this.toolSearchButton.Text = "検索";
-            this.toolSearchButton.Click += new System.EventHandler(this.toolSearchButton_Click);
-            // 
-            // buttonAtachMenu
-            // 
-            this.buttonAtachMenu.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.buttonAtachMenu.Image = ((System.Drawing.Image)(resources.GetObject("buttonAtachMenu.Image")));
-            this.buttonAtachMenu.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.buttonAtachMenu.MergeAction = System.Windows.Forms.MergeAction.Insert;
-            this.buttonAtachMenu.Name = "buttonAtachMenu";
-            this.buttonAtachMenu.Size = new System.Drawing.Size(34, 28);
-            this.buttonAtachMenu.Text = "toolStripDropDownButton1";
-            this.buttonAtachMenu.ToolTipText = "添付ファイルが存在するときのメニュー";
-            this.buttonAtachMenu.Visible = false;
-            this.buttonAtachMenu.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.buttonAtachMenu_DropDownItemClicked);
-            // 
-            // menuEditBlackListMailAddress
-            // 
-            this.menuEditBlackListMailAddress.Name = "menuEditBlackListMailAddress";
-            this.menuEditBlackListMailAddress.Size = new System.Drawing.Size(303, 26);
-            this.menuEditBlackListMailAddress.Text = "ブラックリストメールアドレスの編集(&E)";
-            this.menuEditBlackListMailAddress.Click += new System.EventHandler(this.menuEditBlackListMailAddress_Click);
             // 
             // FormMain
             // 
@@ -1079,7 +1106,10 @@ namespace MizuMail
         private System.Windows.Forms.ToolStripMenuItem menuRedoTags;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
         private System.Windows.Forms.ToolStripMenuItem menuAddBlackListMail;
+        private System.Windows.Forms.ToolStripMenuItem menuAddWhiteListMail;
+        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem11;
         private System.Windows.Forms.ToolStripMenuItem menuEditBlackListMailAddress;
+        private System.Windows.Forms.ToolStripMenuItem menuEditWhiteListMailAddress;
     }
 }
 
