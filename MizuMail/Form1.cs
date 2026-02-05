@@ -183,54 +183,25 @@ namespace MizuMail
                 TreeNode node = treeMain.SelectedNode;
                 MailFolder folder = node?.Tag as MailFolder;
 
-                //
-                // ★★★ メールボックス一覧モード（folder == null）
-                //
                 if (folder == null)
                 {
-                    logger.Debug("[UpdateListView] folder == null → MailboxView");
-
-                    // ★ VirtualMode の内部データを完全リセット
+                    // メールボックス一覧
                     _virtualList.Clear();
+                    listMain.VirtualListSize = 0;
 
-                    // ★ 選択をクリア（古い選択イベント対策）
-                    listMain.SelectedIndices.Clear();
-
-                    // ★ VirtualListSize を 0 にして内部状態をリセット
-                    if (listMain.VirtualMode)
-                        listMain.VirtualListSize = 0;
-
-                    // ★ VirtualMode を OFF に戻す
                     if (listMain.VirtualMode)
                     {
                         listMain.VirtualMode = false;
                         listMain.RetrieveVirtualItem -= listMain_RetrieveVirtualItem;
                     }
 
-                    listMain.BeginUpdate();
-                    try
-                    {
-                        listMain.Items.Clear();
-                        ShowMailboxInfo();   // Items.Add ベースで OK
-                    }
-                    finally
-                    {
-                        try { listMain.EndUpdate(); } catch { }
-                    }
-
+                    listMain.Items.Clear();
+                    ShowMailboxInfo();
                     labelMessage.Text = "メールボックス一覧";
-
-                    // ★★★ Visible を true に戻す（消失対策）
-                    listMain.Visible = true;
-
                     return;
                 }
 
-                //
-                // ★★★ メール一覧モード（VirtualMode ON）
-                //
-                mailBoxViewFlag = false;
-
+                // メール一覧
                 if (!listMain.VirtualMode)
                 {
                     listMain.Items.Clear();
@@ -238,15 +209,8 @@ namespace MizuMail
                     listMain.RetrieveVirtualItem += listMain_RetrieveVirtualItem;
                 }
 
-                // ★ displayList 抽出
                 var displayList = mailCache.Values
-                    .Where(m => m != null &&
-                                m.Folder != null &&
-                                m.Folder.FullPath == folder.FullPath)
-                    .ToList();
-
-                // ★ デフォルトは日付降順
-                displayList = displayList
+                    .Where(m => m != null && m.Folder?.FullPath == folder.FullPath)
                     .OrderByDescending(m =>
                     {
                         if (DateTime.TryParse(m.date, out DateTime dt))
@@ -255,7 +219,7 @@ namespace MizuMail
                     })
                     .ToList();
 
-                // ★ キーワードフィルタ
+                // キーワードフィルタ
                 if (!string.IsNullOrEmpty(currentKeyword))
                 {
                     string kw = currentKeyword;
@@ -267,7 +231,7 @@ namespace MizuMail
                         .ToList();
                 }
 
-                // ★ フィルタコンボ
+                // フィルタコンボ
                 string filter = toolFilterCombo.SelectedItem?.ToString();
                 if (filter == "未読")
                     displayList = displayList.Where(m => m.notReadYet).ToList();
@@ -281,26 +245,10 @@ namespace MizuMail
                         return false;
                     }).ToList();
 
-                // ★ VirtualMode 用データソースにセット
                 _virtualList = displayList;
-
-                // ★ VirtualListSize を更新（描画トリガー）
                 listMain.VirtualListSize = _virtualList.Count;
 
-                listMain.Visible = true;
                 labelMessage.Text = $"{_virtualList.Count}件読み込みました。";
-
-                logger.Debug($"VirtualListSize={listMain.VirtualListSize}, _virtualList.Count={_virtualList.Count}");
-
-                //
-                // ★★★ 選択の安定化（最重要）
-                //
-                listMain.SelectedIndices.Clear();
-
-                if (_virtualList.Count > 0)
-                {
-                    listMain.SelectedIndices.Add(0);
-                }
             }
             finally
             {
@@ -321,7 +269,6 @@ namespace MizuMail
             if (isBuildingTree)
                 return;
 
-            // ★ フォーム起動直後の「勝手に当たるフォーカス」は無視する
             if (!_firstSelectHandled)
             {
                 _firstSelectHandled = true;
@@ -335,23 +282,21 @@ namespace MizuMail
             currentMail = null;
 
             var node = e.Node;
-            listMain.Visible = false;
+
             await LoadAndShowFolderAsync(node);
 
-            // ★★★ これが無かったせいで画面が更新されていなかった
-            UpdateView();
+            // ★ UpdateView() は呼ばない
+            UpdateListView();
         }
 
         private async Task LoadAndShowFolderAsync(TreeNode node)
         {
             var folder = node.Tag as MailFolder;
 
-            // カラムだけ先に更新（UIスレッドでOK）
             UpdateColumnHeaders(folder);
 
             if (folder != null)
             {
-                // すでにロード済みか？
                 bool folderLoaded = mailCache.Values.Any(m =>
                     m != null &&
                     m.Folder != null &&
@@ -360,10 +305,8 @@ namespace MizuMail
 
                 if (!folderLoaded)
                 {
-                    // ★★★ 重い処理はバックグラウンドで実行（UIを止めない）
                     await Task.Run(() => LoadEmlFolder(folder));
 
-                    // ★ null の削除（軽いのでUIスレッドでOK）
                     foreach (var key in mailCache.Where(kv => kv.Value == null)
                                                  .Select(kv => kv.Key)
                                                  .ToList())
@@ -373,8 +316,8 @@ namespace MizuMail
                 }
             }
 
-            // ★★★ ロード完了後に UI 更新（UIスレッドで実行）
-            UpdateView();
+            // ★ UpdateView() は呼ばない
+            UpdateListView();
         }
 
         private void UpdateColumnHeaders(MailFolder folder)
@@ -582,6 +525,9 @@ namespace MizuMail
 
         private void listMain_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
+            if (suppressSelect)
+                return;
+
             if (listMain.SelectedIndices.Count != 1)
             {
                 currentMail = null;
@@ -590,8 +536,6 @@ namespace MizuMail
             }
 
             int index = listMain.SelectedIndices[0];
-
-            // ★ VirtualMode 安全対策：範囲外なら無視
             if (index < 0 || index >= _virtualList.Count)
             {
                 currentMail = null;
