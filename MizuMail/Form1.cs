@@ -70,6 +70,9 @@ namespace MizuMail
         // ★ フォルダごとのキャッシュ
         private Dictionary<string, Mail> mailCache = new Dictionary<string, Mail>();
 
+        // ★ フォルダ → Message-ID のインデックス
+        private Dictionary<string, List<string>> folderIndex = new Dictionary<string, List<string>>();
+
         // ロガーの取得
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -209,8 +212,22 @@ namespace MizuMail
                     listMain.RetrieveVirtualItem += listMain_RetrieveVirtualItem;
                 }
 
-                var displayList = mailCache.Values
-                    .Where(m => m != null && m.Folder?.FullPath == folder.FullPath)
+                // ★ folderIndex を使って高速に取得
+                List<string> ids;
+                if (!folderIndex.TryGetValue(folder.FullPath, out ids))
+                {
+                    ids = new List<string>();
+                }
+
+                // ★ Message-ID → Mail に変換
+                var displayList = ids
+                    .Where(id => mailCache.ContainsKey(id))
+                    .Select(id => mailCache[id])
+                    .Where(m => m != null)
+                    .ToList();
+
+                // ★ 日付降順ソート（元コードと同じ）
+                displayList = displayList
                     .OrderByDescending(m =>
                     {
                         if (DateTime.TryParse(m.date, out DateTime dt))
@@ -219,7 +236,7 @@ namespace MizuMail
                     })
                     .ToList();
 
-                // キーワードフィルタ
+                // ★ キーワードフィルタ
                 if (!string.IsNullOrEmpty(currentKeyword))
                 {
                     string kw = currentKeyword;
@@ -231,7 +248,7 @@ namespace MizuMail
                         .ToList();
                 }
 
-                // フィルタコンボ
+                // ★ フィルタコンボ
                 string filter = toolFilterCombo.SelectedItem?.ToString();
                 if (filter == "未読")
                     displayList = displayList.Where(m => m.notReadYet).ToList();
@@ -245,10 +262,18 @@ namespace MizuMail
                         return false;
                     }).ToList();
 
+                // ★ VirtualMode 用リスト更新
                 _virtualList = displayList;
                 listMain.VirtualListSize = _virtualList.Count;
 
                 labelMessage.Text = $"{_virtualList.Count}件読み込みました。";
+
+                // ★ 一番上のメールを自動選択して開く
+                if (_virtualList.Count > 0)
+                {
+                    listMain.SelectedIndices.Clear();
+                    listMain.SelectedIndices.Add(0);
+                }
             }
             finally
             {
@@ -2676,6 +2701,9 @@ namespace MizuMail
             if (!Directory.Exists(folder.FullPath))
                 return list;
 
+            // ★ フォルダインデックス初期化（毎回クリアして再構築）
+            folderIndex[folder.FullPath] = new List<string>();
+
             string[] files = Directory.GetFiles(folder.FullPath, "*.eml");
 
             foreach (string file in files)
@@ -2688,8 +2716,11 @@ namespace MizuMail
                     if (fi.Length == 0)
                     {
                         logger.Warn($"LoadEmlFolder skip 0-byte file: {file}");
+
+                        // ★ filePath キー時代の残骸を削除
                         if (mailCache.ContainsKey(file))
                             mailCache.Remove(file);
+
                         fi.Delete();
                         continue;
                     }
@@ -2702,15 +2733,24 @@ namespace MizuMail
                         message = MimeMessage.Load(fs);
                     }
 
+                    // ★ Message-ID をキーにする
+                    string messageId = message.MessageId;
+
+                    // ★ Message-ID が無いメールはファイル名を代用
+                    if (string.IsNullOrEmpty(messageId))
+                    {
+                        messageId = Path.GetFileName(file);
+                    }
+
+                    // ★ Mail オブジェクト生成
                     var mail = new Mail();
+                    mail.MessageId = messageId;
                     mail.mailName = Path.GetFileName(file);
                     mail.Folder = folder;
-
-                    // ★ これが絶対必要
                     mail.mailPath = file;
-
                     mail.notReadYet = mail.mailName.EndsWith("_unread.eml", StringComparison.OrdinalIgnoreCase);
 
+                    // 差出人
                     var fromMailbox = message.From.Mailboxes.FirstOrDefault();
                     if (fromMailbox != null)
                     {
@@ -2726,6 +2766,7 @@ namespace MizuMail
                         mail.From = new MailAddress("unknown@example.com", "(差出人なし)");
                     }
 
+                    // 宛先
                     if (message.To != null && message.To.Mailboxes.Any())
                     {
                         var listTo = new List<string>();
@@ -2749,7 +2790,7 @@ namespace MizuMail
                     else
                         mail.date = "";
 
-                    mail.hasAtach = HasRealAttachment(message);    // message.Attachments != null && message.Attachments.Any();
+                    mail.hasAtach = HasRealAttachment(message);
                     mail.body = "";
                     mail.message = message;
                     mail.isDraft = message.Headers["X-MizuMail-Draft"] == "1";
@@ -2771,12 +2812,17 @@ namespace MizuMail
 
                     list.Add(mail);
 
-                    // ★ mailCache に登録（CountUnread と同期の鍵）
-                    mailCache[file] = mail;
+                    // ★ mailCache に登録（Message-ID をキーに）
+                    mailCache[messageId] = mail;
+
+                    // ★ フォルダインデックスに登録
+                    folderIndex[folder.FullPath].Add(messageId);
                 }
                 catch (Exception ex)
                 {
                     logger.Error("LoadEmlFolder error: " + file + " : " + ex.Message);
+
+                    // ★ filePath キー時代の残骸を削除
                     if (mailCache.ContainsKey(file))
                         mailCache.Remove(file);
                 }
@@ -2792,7 +2838,6 @@ namespace MizuMail
             string file = Path.Combine(mail.Folder.FullPath, mail.mailName);
             return MimeMessage.Load(file);
         }
-
 
         private void treeMain_DragOver(object sender, DragEventArgs e)
         {
@@ -3152,14 +3197,48 @@ namespace MizuMail
 
         private void DeletePermanently(Mail mail)
         {
-            if (mail == null) return;
+            if (mail == null)
+                return;
 
+            // ★ ファイル削除
             string path = ResolveMailPath(mail);
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                File.Delete(path);
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error($"DeletePermanently error deleting file: {path} : {ex.Message}");
+                }
+            }
 
-            // ★ これが必要
-            mailCache.Remove(path);
+            // ★ タグ JSON も削除（存在すれば）
+            try
+            {
+                string tagJson = path + ".tags.json";
+                if (File.Exists(tagJson))
+                    File.Delete(tagJson);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"DeletePermanently error deleting tag JSON: {path}.tags.json : {ex.Message}");
+            }
+
+            // ★ mailCache から削除（Message-ID ベース）
+            if (!string.IsNullOrEmpty(mail.MessageId))
+            {
+                mailCache.Remove(mail.MessageId);
+            }
+
+            // ★ フォルダインデックスからも削除（最重要）
+            string folderPath = mail.Folder?.FullPath;
+            if (!string.IsNullOrEmpty(folderPath) &&
+                folderIndex.ContainsKey(folderPath))
+            {
+                folderIndex[folderPath].Remove(mail.MessageId);
+            }
         }
 
         private void UndoDelete(Mail mail)
@@ -3315,16 +3394,14 @@ namespace MizuMail
             }
 
             string oldPath = ResolveMailPath(mail);
-
-            // ★ 残像対策（1回でOK）
-            if (mailCache.ContainsKey(oldPath))
-                mailCache.Remove(oldPath);
-
-            FolderType oldFolderType = mail.Folder.Type;
             string oldFolderPath = mail.Folder.FullPath;
+            FolderType oldFolderType = mail.Folder.Type;
             string oldName = mail.mailName;
 
-            // ★ 新しいファイル名を決める
+            // ★ Message-ID をキーにする
+            string key = mail.MessageId;
+
+            // ★ 新しいファイル名を決める（元コードを忠実に維持）
             if (newFolder.Type == FolderType.Draft)
             {
                 mail.notReadYet = true;
@@ -3350,22 +3427,39 @@ namespace MizuMail
 
             string newPath = Path.Combine(newFolder.FullPath, mail.mailName);
 
-            // ★ 先にファイルを移動する
+            // ★ フォルダ作成
             Directory.CreateDirectory(newFolder.FullPath);
+
+            // ★ ファイル移動
             if (File.Exists(oldPath))
                 File.Move(oldPath, newPath);
 
-            // ★ タグ JSON も移動する
+            // ★ タグ JSON も移動（Message-ID を使う）
             TagStorage.MoveTags(mail.message.MessageId, oldPath, newPath);
 
-            // ★ mailCache 更新（ここでは oldPath はもう存在しないので Remove 不要）
+            // ★ mail オブジェクト更新
             mail.mailPath = newPath;
+            mail.Folder = newFolder;
 
-            // ★ メール内容を再読み込み（添付も含めて復元）
+            // ★ メール内容を再読み込み（添付含む）
             mail.message = MimeMessage.Load(newPath);
 
-            mail.Folder = newFolder;
-            mailCache[newPath] = mail;
+            // ★ mailCache 更新（Message-ID キーで上書き）
+            if (!string.IsNullOrEmpty(key))
+            {
+                mailCache[key] = mail;
+            }
+
+            // ★ フォルダインデックス更新（最重要）
+            // 旧フォルダから削除
+            if (folderIndex.ContainsKey(oldFolderPath))
+                folderIndex[oldFolderPath].Remove(mail.MessageId);
+
+            // 新フォルダに追加
+            if (!folderIndex.ContainsKey(newFolder.FullPath))
+                folderIndex[newFolder.FullPath] = new List<string>();
+
+            folderIndex[newFolder.FullPath].Add(mail.MessageId);
 
             // ★ ごみ箱へ移動する場合だけ Undo 情報を JSON で保存
             if (newFolder.Type == FolderType.Trash)

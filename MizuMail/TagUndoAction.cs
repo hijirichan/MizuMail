@@ -15,13 +15,13 @@ namespace MizuMail
         public void Undo()
         {
             Mail.Labels = new List<string>(OldLabels);
-            FormMain.SaveMailLabels(Mail);
+            TagStorage.SaveTags(Mail);   // ★ Message-ID ベースの保存
         }
 
         public void Redo()
         {
             Mail.Labels = new List<string>(NewLabels);
-            FormMain.SaveMailLabels(Mail);
+            TagStorage.SaveTags(Mail);   // ★ Message-ID ベースの保存
         }
     }
 }

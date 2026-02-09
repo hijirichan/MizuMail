@@ -2,9 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MizuMail
 {
@@ -12,12 +9,16 @@ namespace MizuMail
     {
         public static string GetJsonPath(Mail mail)
         {
-            if (mail?.message == null || string.IsNullOrEmpty(mail.mailPath))
+            if (mail == null || string.IsNullOrEmpty(mail.mailPath))
                 return null;
 
-            string id = NormalizeId(mail.message.MessageId);
-            string folder = Path.GetDirectoryName(mail.mailPath);
+            // ★ Message-ID を安全なファイル名に変換
+            string id = NormalizeId(mail.MessageId);
+            if (string.IsNullOrEmpty(id))
+                return null;
 
+            // ★ タグ JSON はメールと同じフォルダに置く（現状維持）
+            string folder = Path.GetDirectoryName(mail.mailPath);
             return Path.Combine(folder, id + ".json");
         }
 
@@ -45,11 +46,9 @@ namespace MizuMail
             if (jsonPath == null)
                 return;
 
-            // ★ タグがnullなら抜ける
             if (mail.Labels == null)
                 return;
 
-            // ★ 空でも保存する
             var data = new TagData { Tags = mail.Labels };
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
 
@@ -84,6 +83,10 @@ namespace MizuMail
         {
             if (string.IsNullOrEmpty(id))
                 return null;
+
+            // ★ ファイル名に使えない文字を除去
+            foreach (char c in Path.GetInvalidFileNameChars())
+                id = id.Replace(c, '_');
 
             return id.Replace("<", "").Replace(">", "").Replace(":", "_");
         }

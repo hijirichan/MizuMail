@@ -38,6 +38,7 @@ namespace MizuMail
         public string bccaddress;               // BCCアドレス
         public string subject;                  // 件名
         public string body;                     // 本文
+        public string MessageId { get; set; }   // メッセージID
         public MimeMessage message;             // MimeMessageオブジェクト
         public bool hasAtach;                   // 添付ファイルがあるかどうか
         public string atach;                    // 添付ファイル名
