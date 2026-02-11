@@ -303,7 +303,7 @@ namespace MizuMail
             // menuAccountSetting
             // 
             this.menuAccountSetting.Name = "menuAccountSetting";
-            this.menuAccountSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuAccountSetting.Size = new System.Drawing.Size(212, 26);
             this.menuAccountSetting.Text = "アカウントの設定(&M)";
             this.menuAccountSetting.ToolTipText = "メールを送受信する情報を設定します。";
             this.menuAccountSetting.Click += new System.EventHandler(this.menuAccountSetting_Click);
@@ -311,14 +311,14 @@ namespace MizuMail
             // menuRuleEdit
             // 
             this.menuRuleEdit.Name = "menuRuleEdit";
-            this.menuRuleEdit.Size = new System.Drawing.Size(224, 26);
+            this.menuRuleEdit.Size = new System.Drawing.Size(212, 26);
             this.menuRuleEdit.Text = "振り分け設定(&R)";
             this.menuRuleEdit.Click += new System.EventHandler(this.menuRuleEdit_Click);
             // 
             // menuSignatureSetting
             // 
             this.menuSignatureSetting.Name = "menuSignatureSetting";
-            this.menuSignatureSetting.Size = new System.Drawing.Size(224, 26);
+            this.menuSignatureSetting.Size = new System.Drawing.Size(212, 26);
             this.menuSignatureSetting.Text = "署名の設定(&S)";
             this.menuSignatureSetting.Click += new System.EventHandler(this.menuSignatureSetting_Click);
             // 
@@ -328,20 +328,20 @@ namespace MizuMail
             this.menuEditBlackListMailAddress,
             this.menuEditWhiteListMailAddress});
             this.toolStripMenuItem11.Name = "toolStripMenuItem11";
-            this.toolStripMenuItem11.Size = new System.Drawing.Size(224, 26);
+            this.toolStripMenuItem11.Size = new System.Drawing.Size(212, 26);
             this.toolStripMenuItem11.Text = "迷惑メール対策(&P)";
             // 
             // menuEditBlackListMailAddress
             // 
             this.menuEditBlackListMailAddress.Name = "menuEditBlackListMailAddress";
-            this.menuEditBlackListMailAddress.Size = new System.Drawing.Size(224, 26);
+            this.menuEditBlackListMailAddress.Size = new System.Drawing.Size(222, 26);
             this.menuEditBlackListMailAddress.Text = "ブラックリスト編集(&B)";
             this.menuEditBlackListMailAddress.Click += new System.EventHandler(this.menuEditBlackListMailAddress_Click);
             // 
             // menuEditWhiteListMailAddress
             // 
             this.menuEditWhiteListMailAddress.Name = "menuEditWhiteListMailAddress";
-            this.menuEditWhiteListMailAddress.Size = new System.Drawing.Size(224, 26);
+            this.menuEditWhiteListMailAddress.Size = new System.Drawing.Size(222, 26);
             this.menuEditWhiteListMailAddress.Text = "ホワイトリスト編集(&W)";
             this.menuEditWhiteListMailAddress.Click += new System.EventHandler(this.menuEditWhiteListMailAddress_Click);
             // 

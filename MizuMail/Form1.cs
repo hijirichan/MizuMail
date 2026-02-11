@@ -2742,6 +2742,12 @@ namespace MizuMail
                         messageId = Path.GetFileName(file);
                     }
 
+                    // ★ 念のため null を完全排除
+                    if (string.IsNullOrEmpty(messageId))
+                    {
+                        messageId = Guid.NewGuid().ToString();
+                    }
+
                     // ★ Mail オブジェクト生成
                     var mail = new Mail();
                     mail.MessageId = messageId;
@@ -2816,7 +2822,8 @@ namespace MizuMail
                     mailCache[messageId] = mail;
 
                     // ★ フォルダインデックスに登録
-                    folderIndex[folder.FullPath].Add(messageId);
+                    if (!string.IsNullOrEmpty(mail.MessageId))
+                        folderIndex[folder.FullPath].Add(mail.MessageId);
                 }
                 catch (Exception ex)
                 {
@@ -3391,6 +3398,12 @@ namespace MizuMail
             {
                 logger.Error("MoveMailWithUndo: newFolder is null");
                 return;
+            }
+
+            // ★ Message-ID が null の可能性を完全排除
+            if (string.IsNullOrEmpty(mail.MessageId))
+            {
+                mail.MessageId = Guid.NewGuid().ToString();
             }
 
             string oldPath = ResolveMailPath(mail);
